@@ -54,7 +54,7 @@ export function CopySnippet({ url }: CopySnippetProps) {
           className="gap-2"
         >
           {copiedType === type ? (
-            <Check className="h-4 w-4 text-green-600" />
+            <Check className="h-4 w-4 text-success" />
           ) : (
             <Copy className="h-4 w-4" />
           )}

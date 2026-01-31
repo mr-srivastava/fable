@@ -47,7 +47,7 @@ function CreateBlob() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <JsonEditorPanel
           mode="create"
           value={json}

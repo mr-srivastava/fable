@@ -109,9 +109,9 @@ export function JsonEditor({
                   className={cn(
                     'h-full transition-all duration-300',
                     sizePercentage < 70
-                      ? 'bg-green-500'
+                      ? 'bg-success'
                       : sizePercentage < 90
-                        ? 'bg-yellow-500'
+                        ? 'bg-warning'
                         : 'bg-destructive'
                   )}
                   style={{ width: `${sizePercentage}%` }}
@@ -121,7 +121,7 @@ export function JsonEditor({
 
             {/* Validation status */}
             {validation.valid ? (
-              <span className="text-xs text-green-500 flex items-center gap-1">
+              <span className="text-xs text-success flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" />
                 Valid JSON
               </span>

@@ -2,13 +2,6 @@ import { Link } from '@tanstack/react-router'
 import { Check, Copy } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { CopySnippet } from '@/components/CopySnippet'
 import { JsonEditor } from '@/components/JsonEditor'
 
@@ -87,25 +80,25 @@ function JsonEditorPanelHeader({
   mode,
 }: JsonEditorPanelHeaderProps) {
   return (
-    <CardHeader>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <CardTitle>{title}</CardTitle>
-          {description && (
-            <CardDescription className="mt-1.5">{description}</CardDescription>
-          )}
-        </div>
-        {mode === 'view' && (
-          <div className="shrink-0">
-            <Link to="/">
-              <span className="text-sm text-primary hover:underline">
-                Create new
-              </span>
-            </Link>
-          </div>
+    <div className="flex flex-wrap items-start justify-between gap-2 pb-4">
+      <div>
+        <h2 className="text-lg font-semibold leading-none tracking-tight">
+          {title}
+        </h2>
+        {description && (
+          <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
-    </CardHeader>
+      {mode === 'view' && (
+        <div className="shrink-0">
+          <Link to="/">
+            <span className="text-sm text-primary hover:underline">
+              Create new
+            </span>
+          </Link>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -130,7 +123,7 @@ function BlobCreatedAlert({
             className="shrink-0"
           >
             {copied ? (
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-4 w-4 text-success" />
             ) : (
               <Copy className="h-4 w-4" />
             )}
@@ -236,13 +229,13 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const submitDisabled = !value.trim()
 
   return (
-    <Card>
+    <section className="space-y-4">
       <JsonEditorPanelHeader
         title={title}
         description={description}
         mode={props.mode}
       />
-      <CardContent className="space-y-4">
+      <div className="space-y-4">
         <BlobEditorActions
           onSubmit={onSubmit}
           onReset={props.onReset}
@@ -253,7 +246,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           showCopySnippet={!isCreate}
         />
         <JsonEditorGrid value={value} onChange={onChange} error={error} />
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
