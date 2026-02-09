@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -12,9 +12,7 @@ export const Route = createFileRoute('/')({
 function CreateBlob() {
   const [json, setJson] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-
+  const navigate = useNavigate()
   const createBlob = useMutation(api.blobs.create)
 
   const handleCreate = async () => {
@@ -26,22 +24,9 @@ function CreateBlob() {
     }
     try {
       const id = await createBlob({ data: json })
-      const url =
-        typeof window !== 'undefined' ? `${window.location.origin}/blob/${id}` : `/blob/${id}`
-      setBlobUrl(url)
+      navigate({ to: '/blob/$id', params: { id } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create blob')
-    }
-  }
-
-  const handleCopyUrl = async () => {
-    if (!blobUrl) return
-    try {
-      await navigator.clipboard.writeText(blobUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setError('Failed to copy URL')
     }
   }
 
@@ -55,9 +40,6 @@ function CreateBlob() {
           error={error ?? undefined}
           onSubmit={handleCreate}
           onReset={() => setJson('')}
-          blobUrl={blobUrl}
-          onCopyUrl={handleCopyUrl}
-          copied={copied}
         />
       </div>
     </div>

@@ -28,7 +28,7 @@ export function JsonEditor({
   mode,
   onChange,
   error,
-  height = '400px',
+  height = '580px',
   placeholder = '{"key": "value"}',
   className,
 }: JsonEditorProps) {
