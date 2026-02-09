@@ -9,6 +9,7 @@ export const checkAndIncrement = internalMutation({
     ip: v.string(),
     now: v.number(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('rateLimits')
@@ -35,5 +36,6 @@ export const checkAndIncrement = internalMutation({
         windowStart: args.now,
       })
     }
+    return null
   },
 })

@@ -1,8 +1,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
+import type { Doc, Id } from '../../convex/_generated/dataModel'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { validateJSON } from '@/lib/validators'
 
@@ -10,19 +10,16 @@ export const Route = createFileRoute('/blob/$id')({
   component: ViewBlob,
 })
 
-function ViewBlob() {
-  const { id } = Route.useParams()
-  const blob = useQuery(api.blobs.get, { id: id as Id<'blobs'> })
-  const [json, setJson] = useState('')
+function BlobEditor({
+  id,
+  blob,
+}: {
+  id: string
+  blob: Doc<'blobs'>
+}) {
+  const [json, setJson] = useState(blob.data)
   const [error, setError] = useState<string | null>(null)
-
   const updateBlob = useMutation(api.blobs.update)
-
-  useEffect(() => {
-    if (blob?.data) {
-      setJson(blob.data)
-    }
-  }, [blob])
 
   const handleUpdate = async () => {
     setError(null)
@@ -37,6 +34,42 @@ function ViewBlob() {
       setError(err instanceof Error ? err.message : 'Failed to update blob')
     }
   }
+
+  const blobUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/blob/${id}`
+      : `/blob/${id}`
+
+  const updatedAtMs = blob.updatedAt ?? blob._creationTime
+  const updatedAtFormatted = updatedAtMs
+    ? new Date(updatedAtMs).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : '—'
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <JsonEditorPanel
+          mode="view"
+          value={json}
+          onChange={setJson}
+          error={error ?? undefined}
+          onSubmit={handleUpdate}
+          title="JSON blob"
+          description={`Last updated ${updatedAtFormatted}`}
+          blobUrl={blobUrl}
+          onReset={() => setJson(blob.data)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ViewBlob() {
+  const { id } = Route.useParams()
+  const blob = useQuery(api.blobs.get, { id: id as Id<'blobs'> })
 
   if (blob === undefined) {
     return (
@@ -57,34 +90,5 @@ function ViewBlob() {
     )
   }
 
-  const blobUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/blob/${id}`
-      : `/blob/${id}`
-
-  const updatedAtMs = blob.updatedAt ?? blob._creationTime
-  const updatedAtFormatted = updatedAtMs
-    ? new Date(updatedAtMs).toLocaleString(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    })
-    : '—'
-
-  return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <JsonEditorPanel
-          mode="view"
-          value={json}
-          onChange={setJson}
-          error={error ?? undefined}
-          onSubmit={handleUpdate}
-          title="JSON blob"
-          description={`Last updated ${updatedAtFormatted}`}
-          blobUrl={blobUrl}
-          onReset={() => setJson(blob.data)}
-        />
-      </div>
-    </div>
-  )
+  return <BlobEditor key={blob._id} id={id} blob={blob} />
 }
