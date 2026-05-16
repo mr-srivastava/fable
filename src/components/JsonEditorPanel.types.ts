@@ -17,8 +17,10 @@ export interface JsonEditorPanelFields {
 
 export type JsonEditorPanelHeaderProps = Pick<
   JsonEditorPanelFields,
-  'description'
->
+  'description' | 'title'
+> & {
+  mode: 'create' | 'view'
+}
 
 export type BlobCreatedAlertProps = Required<Pick<JsonEditorPanelFields, 'blobUrl'>> &
   Pick<JsonEditorPanelFields, 'onCopyUrl' | 'copied'>

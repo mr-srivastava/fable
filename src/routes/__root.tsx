@@ -7,6 +7,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import Header from '../components/Header'
+import { ThemeProvider } from '../components/ThemeProvider'
 
 import ConvexProvider from '../integrations/convex/provider'
 
@@ -36,6 +37,19 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
     links: [
       {
+        rel: 'preconnect',
+        href: 'https://fonts.googleapis.com',
+      },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossOrigin: 'anonymous',
+      },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Lora:wght@600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
+      },
+      {
         rel: 'stylesheet',
         href: appCss,
       },
@@ -45,13 +59,17 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   shellComponent: RootDocument,
 })
 
+const themeInitScript = `(function(){try{var t=localStorage.getItem('fable-theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}})();`
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body>
+        <ThemeProvider>
         <ConvexProvider>
           <Header />
           {children}
@@ -68,6 +86,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             ]}
           />
         </ConvexProvider>
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

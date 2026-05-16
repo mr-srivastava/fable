@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json, jsonParseLinter } from '@codemirror/lang-json'
 import { linter } from '@codemirror/lint'
-import { vscodeDark } from '@uiw/codemirror-theme-vscode'
+import { useTheme } from '@/components/ThemeProvider'
+import { getFableCodeMirrorTheme } from '@/lib/codemirror-fable-theme'
 import {
   AlertCircle,
   AlertTriangle,
@@ -32,7 +33,13 @@ export function JsonEditor({
   placeholder = '{"key": "value"}',
   className,
 }: JsonEditorProps) {
-  // Enhanced extensions with linting for better error detection
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const editorTheme = useMemo(
+    () => getFableCodeMirrorTheme(isDark),
+    [isDark]
+  )
+
   const extensions = useMemo(
     () => [json(), linter(jsonParseLinter())],
     []
@@ -73,7 +80,7 @@ export function JsonEditor({
       <div className={cn('space-y-2', className)}>
         <div
           className={cn(
-            'rounded-md border bg-background overflow-hidden transition-colors',
+            'rounded-md border border-border bg-card overflow-hidden transition-colors',
             'ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
             !validation.valid && value.length > 0 && 'border-destructive/50'
           )}
@@ -81,7 +88,7 @@ export function JsonEditor({
           <CodeMirror
             value={value}
             height={height}
-            theme={vscodeDark}
+            theme={editorTheme}
             extensions={extensions}
             onChange={handleChange}
             placeholder={placeholder}
@@ -193,11 +200,11 @@ export function JsonEditor({
   }
 
   return (
-    <div className={cn('rounded-md border bg-background overflow-hidden', className)}>
+    <div className={cn('rounded-md border border-border bg-card overflow-hidden', className)}>
       <CodeMirror
         value={formatted}
         height={height}
-        theme={vscodeDark}
+        theme={editorTheme}
         extensions={extensions}
         editable={false}
         basicSetup={{
