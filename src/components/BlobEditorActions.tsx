@@ -56,7 +56,11 @@ export function BlobEditorActions({
       aria-label="Editor actions"
     >
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button onClick={onSubmit} disabled={disabled}>
+        <Button
+          onClick={onSubmit}
+          disabled={disabled}
+          className="transition-transform enabled:scale-[1.02] motion-reduce:enabled:scale-100"
+        >
           Save
         </Button>
         <Button variant="outline" onClick={onReset}>

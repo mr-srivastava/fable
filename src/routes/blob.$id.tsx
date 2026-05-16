@@ -73,17 +73,17 @@ function ViewBlob() {
 
   if (blob === undefined) {
     return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-        <p className="text-muted-foreground">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <p className="font-medium text-muted-foreground">Loading…</p>
       </div>
     )
   }
 
   if (blob === null) {
     return (
-      <div className="min-h-screen bg-background p-6 flex flex-col items-center justify-center gap-4">
-        <p className="text-destructive">Blob not found</p>
-        <Link to="/" className="text-primary underline">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6">
+        <p className="font-medium text-destructive">Blob not found</p>
+        <Link to="/" className="font-medium text-primary hover:underline">
           Create a blob
         </Link>
       </div>
