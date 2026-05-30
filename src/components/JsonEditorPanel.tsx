@@ -213,7 +213,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         </Tabs>
 
         <ResizablePanelGroup
-          direction="horizontal"
+          orientation="horizontal"
           className="hidden min-h-[36rem] gap-4 md:flex"
         >
           <ResizablePanel defaultSize={56} minSize={42}>
