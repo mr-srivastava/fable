@@ -49,8 +49,8 @@ function CreateDocument() {
   )
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="space-y-6">
         <JsonEditorPanel
           mode="create"
           value={json}

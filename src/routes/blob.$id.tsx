@@ -20,13 +20,15 @@ function DocumentNotFound() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6">
       <p className="font-medium text-destructive">Document not found</p>
       <Link to="/" className="font-medium text-primary hover:underline">
-        Create a document
+        Create a specimen
       </Link>
     </div>
   )
 }
 
-function getInitialContract(document: Doc<'documents'>): JsonContract | undefined {
+function getInitialContract(
+  document: Doc<'documents'>,
+): JsonContract | undefined {
   if (document.contract) return document.contract as JsonContract
 
   const parsed = parseJsonSafely(document.data)
@@ -88,15 +90,15 @@ function DocumentEditor({
     : '—'
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="space-y-6">
         <JsonEditorPanel
           mode="view"
           value={json}
           onChange={handleJsonChange}
           error={error ?? undefined}
           onSubmit={handleSubmit}
-          title="JSON document"
+          title="Saved specimen"
           description={`Last updated ${updatedAtFormatted}`}
           documentUrl={documentUrl}
           contract={contract}

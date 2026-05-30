@@ -7,16 +7,25 @@ import type {
 import { ContractPanel } from '@/components/contract/ContractPanel'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
 import { JsonEditor } from '@/components/JsonEditor'
+import { Badge } from '@/components/ui/badge'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { validateJSON } from '@/lib/validators'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
-const CREATE_HERO_TITLE = 'Paste JSON, get a link'
+const CREATE_HERO_TITLE = 'Inspect a payload'
 
 const CREATE_DEFAULTS = {
   description:
-    'Paste or type valid JSON below. Max size 100KB. No auth required.',
+    'Paste JSON to infer field metadata, annotate the contract, and share the specimen.',
 } as const
+
+type PayloadStatus = 'waiting' | 'valid' | 'invalid'
 
 function JsonEditorPanelHeader({
   mode,
@@ -25,19 +34,24 @@ function JsonEditorPanelHeader({
 }: JsonEditorPanelHeaderProps) {
   if (mode === 'create') {
     return (
-      <header className="animate-fade-in-up space-y-2 pb-4">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-foreground">
+      <header className="animate-fade-in-up space-y-2">
+        <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-primary">
+          Specimen workbench
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {CREATE_HERO_TITLE}
         </h1>
         {description && (
-          <p className="max-w-xl text-sm text-muted-foreground">{description}</p>
+          <p className="max-w-xl text-sm text-muted-foreground">
+            {description}
+          </p>
         )}
       </header>
     )
   }
 
   return (
-    <header className="animate-fade-in-up space-y-1 pb-4">
+    <header className="animate-fade-in-up space-y-1">
       {title && (
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           {title}
@@ -50,24 +64,80 @@ function JsonEditorPanelHeader({
   )
 }
 
-function JsonEditorGrid({ value, onChange, error }: JsonEditorGridProps) {
+function getStatusBadge(status: PayloadStatus) {
+  if (status === 'valid') return 'Valid JSON'
+  if (status === 'invalid') return 'Invalid JSON'
+  return 'Waiting'
+}
+
+function PayloadStatusBadge({ status }: { status: PayloadStatus }) {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div className="animate-fade-in-up-delay-1 space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Input</h3>
-        <JsonEditor
-          mode="edit"
-          value={value}
-          onChange={onChange}
-          error={error}
-        />
+    <Badge variant={status === 'valid' ? 'default' : 'secondary'}>
+      {getStatusBadge(status)}
+    </Badge>
+  )
+}
+
+function PayloadPanel({
+  value,
+  onChange,
+  error,
+  status,
+}: JsonEditorGridProps & { status: PayloadStatus }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            Payload
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Source JSON for this specimen.
+          </p>
+        </div>
+        <PayloadStatusBadge status={status} />
       </div>
-      <div className="animate-fade-in-up-delay-2 space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          Formatted Preview
-        </h3>
-        <JsonEditor mode="view" value={value} />
+      <Tabs defaultValue="editor" className="gap-3">
+        <TabsList>
+          <TabsTrigger value="editor">Editor</TabsTrigger>
+          <TabsTrigger value="formatted">Formatted</TabsTrigger>
+        </TabsList>
+        <TabsContent value="editor">
+          <JsonEditor
+            mode="edit"
+            value={value}
+            onChange={onChange}
+            error={error}
+          />
+        </TabsContent>
+        <TabsContent value="formatted">
+          <JsonEditor
+            mode="view"
+            value={value}
+            height="clamp(20rem, 48vh, 30rem)"
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function FormattedPanel({ value }: Pick<JsonEditorGridProps, 'value'>) {
+  return (
+    <div className="animate-fade-in-up-delay-2 space-y-2">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          Formatted
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Read-only normalized view of the payload.
+        </p>
       </div>
+      <JsonEditor
+        mode="view"
+        value={value}
+        height="clamp(20rem, 48vh, 30rem)"
+      />
     </div>
   )
 }
@@ -97,20 +167,72 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     return !validateJSON(value).valid
   }, [value])
 
+  const payloadStatus: PayloadStatus = useMemo(() => {
+    const trimmed = value.trim()
+    if (!trimmed) return 'waiting'
+    return validateJSON(value).valid ? 'valid' : 'invalid'
+  }, [value])
+
   return (
     <>
-      <section className={isCreate ? 'space-y-8 pb-20' : 'space-y-6 pb-20'}>
+      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 md:pb-24">
         <JsonEditorPanelHeader
           mode={mode}
           title={title}
           description={description}
         />
-        <JsonEditorGrid value={value} onChange={onChange} error={error} />
-        <ContractPanel
-          contract={contract}
-          disabled={contractDisabled}
-          onChange={onContractChange}
-        />
+
+        <Tabs
+          defaultValue="payload"
+          className="gap-4 md:hidden"
+          aria-label="Workspace panels"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="payload">Payload</TabsTrigger>
+            <TabsTrigger value="formatted">Formatted</TabsTrigger>
+            <TabsTrigger value="contract">Contract</TabsTrigger>
+          </TabsList>
+          <TabsContent value="payload">
+            <PayloadPanel
+              value={value}
+              onChange={onChange}
+              error={error}
+              status={payloadStatus}
+            />
+          </TabsContent>
+          <TabsContent value="formatted">
+            <FormattedPanel value={value} />
+          </TabsContent>
+          <TabsContent value="contract">
+            <ContractPanel
+              contract={contract}
+              disabled={contractDisabled}
+              onChange={onContractChange}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="hidden min-h-[36rem] gap-4 md:flex"
+        >
+          <ResizablePanel defaultSize={56} minSize={42}>
+            <PayloadPanel
+              value={value}
+              onChange={onChange}
+              error={error}
+              status={payloadStatus}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={44} minSize={32}>
+            <ContractPanel
+              contract={contract}
+              disabled={contractDisabled}
+              onChange={onContractChange}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </section>
       <DocumentEditorActions
         onSubmit={onSubmit}

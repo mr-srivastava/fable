@@ -1,27 +1,32 @@
-import { Info } from 'lucide-react'
-import { ContractFieldRow } from './ContractFieldRow'
+import { ContractFieldReferenceItem } from './ContractFieldRow'
 import type { JsonContract, JsonContractField } from '@/types/contract'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Accordion } from '@/components/ui/accordion'
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { buildContractDisplayRows } from '@/lib/contract/contractTree'
 
 type ContractPanelProps = {
   contract?: JsonContract
   disabled?: boolean
   onChange: (contract: JsonContract) => void
+}
+
+function getImmediateChildCount(
+  field: JsonContractField,
+  fields: Array<JsonContractField>,
+) {
+  const prefix = `${field.path}.`
+  const depth = field.path.split('.').length
+
+  return fields.filter((candidate) => {
+    if (!candidate.path.startsWith(prefix)) return false
+    return candidate.path.split('.').length === depth + 1
+  }).length
 }
 
 export function ContractPanel({
@@ -48,26 +53,20 @@ export function ContractPanel({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Contract
+            Contract Inspector
           </h2>
           <p className="text-sm text-muted-foreground">
             {disabled
-              ? 'Valid JSON will infer fields here.'
+              ? 'Valid JSON will infer inspectable fields here.'
               : `${fields.length} field${fields.length === 1 ? '' : 's'} inferred from the current JSON example`}
           </p>
         </div>
       </div>
 
       {!disabled && fields.length > 0 && (
-        <Alert className="border-dashed bg-muted/30">
-          <Info aria-hidden="true" />
-          <AlertTitle>Inferred contract overlay</AlertTitle>
-          <AlertDescription>
-            Edit metadata for paths found in this JSON example. New fields,
-            renamed paths, deleted paths, and alternate response shapes are out
-            of scope for this version.
-          </AlertDescription>
-        </Alert>
+        <p className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          Inferred from current payload. Edit field metadata only.
+        </p>
       )}
 
       <div className="overflow-hidden rounded-md border bg-card">
@@ -82,32 +81,22 @@ export function ContractPanel({
             </EmptyHeader>
           </Empty>
         ) : (
-          <ScrollArea className="w-full">
-            <Table className="min-w-[900px]">
-              <TableHeader>
-                <TableRow className="bg-muted/60 hover:bg-muted/60">
-                  <TableHead className="w-[300px] px-4">Field</TableHead>
-                  <TableHead className="w-[110px]">Type</TableHead>
-                  <TableHead className="w-[104px]">Required</TableHead>
-                  <TableHead className="w-[104px]">Nullable</TableHead>
-                  <TableHead className="w-[210px]">Enum Values</TableHead>
-                  <TableHead className="w-[260px] pr-4">Description</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map(({ field, depth, label, isContainer }) => (
-                  <ContractFieldRow
-                    key={field.path}
-                    field={field}
-                    depth={depth}
-                    label={label}
-                    isContainer={isContainer}
-                    onChange={updateField}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
+          <ScrollArea className="max-h-[34rem]">
+            <Accordion type="multiple" className="w-full">
+              {rows.map(({ field, depth, label, isContainer }) => (
+                <ContractFieldReferenceItem
+                  key={field.path}
+                  field={field}
+                  depth={depth}
+                  label={label}
+                  isContainer={isContainer}
+                  childCount={
+                    isContainer ? getImmediateChildCount(field, fields) : 0
+                  }
+                  onChange={updateField}
+                />
+              ))}
+            </Accordion>
           </ScrollArea>
         )}
       </div>

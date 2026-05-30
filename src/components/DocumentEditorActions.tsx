@@ -4,25 +4,31 @@ import { CopySnippet } from '@/components/CopySnippet'
 
 export function DocumentEditorActions(props: DocumentEditorActionsProps) {
   const { onSubmit, onReset, disabled, mode } = props
+  const submitLabel = mode === 'create' ? 'Create specimen' : 'Update specimen'
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border bg-background/95 px-4 py-3 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80"
+      className="mt-8 border-t bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/85 md:sticky md:bottom-0 md:z-30"
       role="toolbar"
       aria-label="Editor actions"
     >
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button
-          onClick={onSubmit}
-          disabled={disabled}
-          className="transition-transform enabled:scale-[1.02] motion-reduce:enabled:scale-100"
-        >
-          Save
-        </Button>
-        <Button variant="outline" onClick={onReset}>
-          Reset
-        </Button>
-        {mode === 'view' && <CopySnippet url={props.documentUrl} />}
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          {mode === 'create' ? 'Unsaved specimen' : 'Saved specimen'}
+        </p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            onClick={onSubmit}
+            disabled={disabled}
+            className="transition-transform enabled:scale-[1.02] motion-reduce:enabled:scale-100"
+          >
+            {submitLabel}
+          </Button>
+          <Button variant="outline" onClick={onReset}>
+            Reset
+          </Button>
+          {mode === 'view' && <CopySnippet url={props.documentUrl} />}
+        </div>
       </div>
     </div>
   )
