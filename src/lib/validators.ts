@@ -6,26 +6,38 @@ export interface ValidationResult {
   size?: number
 }
 
-export function validateJSON(input: string): ValidationResult {
+type ParseJSONResult =
+  | { ok: true; parsed: unknown; size: number }
+  | { ok: false; error: string; size?: number }
+
+export function parseJSONInput(input: string): ParseJSONResult {
   try {
-    JSON.parse(input)
+    const parsed = JSON.parse(input)
     const size = new Blob([input]).size
 
     if (size > MAX_BLOB_SIZE) {
       return {
-        valid: false,
+        ok: false,
         error: `JSON too large: ${size} bytes (max ${MAX_BLOB_SIZE})`,
         size,
       }
     }
 
-    return { valid: true, size }
+    return { ok: true, parsed, size }
   } catch (e) {
     return {
-      valid: false,
+      ok: false,
       error: e instanceof Error ? e.message : 'Invalid JSON',
     }
   }
+}
+
+export function validateJSON(input: string): ValidationResult {
+  const result = parseJSONInput(input)
+  if (result.ok) {
+    return { valid: true, size: result.size }
+  }
+  return { valid: false, error: result.error, size: result.size }
 }
 
 export function formatBytes(bytes: number): string {

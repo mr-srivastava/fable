@@ -7,9 +7,4 @@ export default defineSchema({
     size: v.number(),
     updatedAt: v.optional(v.number()),
   }),
-  rateLimits: defineTable({
-    ip: v.string(),
-    count: v.number(),
-    windowStart: v.number(),
-  }).index('by_ip', ['ip']),
 })

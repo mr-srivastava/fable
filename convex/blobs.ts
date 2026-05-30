@@ -11,24 +11,28 @@ const blobDoc = v.object({
   updatedAt: v.optional(v.number()),
 })
 
+function assertValidBlobData(data: string): number {
+  try {
+    JSON.parse(data)
+  } catch {
+    throw new Error('Invalid JSON')
+  }
+
+  const size = new Blob([data]).size
+  if (size > MAX_BLOB_SIZE) {
+    throw new Error(`JSON too large: ${size} bytes (max ${MAX_BLOB_SIZE})`)
+  }
+
+  return size
+}
+
 export const create = mutation({
   args: {
     data: v.string(),
   },
   returns: v.id('blobs'),
   handler: async (ctx, args) => {
-    try {
-      JSON.parse(args.data)
-    } catch {
-      throw new Error('Invalid JSON')
-    }
-
-    const size = new Blob([args.data]).size
-    if (size > MAX_BLOB_SIZE) {
-      throw new Error(
-        `JSON too large: ${size} bytes (max ${MAX_BLOB_SIZE})`
-      )
-    }
+    const size = assertValidBlobData(args.data)
 
     return await ctx.db.insert('blobs', {
       data: args.data,
@@ -53,33 +57,13 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    try {
-      JSON.parse(args.data)
-    } catch {
-      throw new Error('Invalid JSON')
-    }
-
-    const size = new Blob([args.data]).size
-    if (size > MAX_BLOB_SIZE) {
-      throw new Error(
-        `JSON too large: ${size} bytes (max ${MAX_BLOB_SIZE})`
-      )
-    }
+    const size = assertValidBlobData(args.data)
 
     await ctx.db.patch(args.id, {
       data: args.data,
       size,
       updatedAt: Date.now(),
     })
-    return null
-  },
-})
-
-export const remove = mutation({
-  args: { id: v.id('blobs') },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.id)
     return null
   },
 })

@@ -28,4 +28,9 @@ export function getStoredTheme(): Theme {
   return 'system'
 }
 
+/** Inline script for __root.tsx to prevent theme flash on load. Keep in sync with getResolvedTheme. */
+export function getThemeInitScript(): string {
+  return `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}})();`
+}
+
 export { STORAGE_KEY, getResolvedTheme, getSystemTheme }

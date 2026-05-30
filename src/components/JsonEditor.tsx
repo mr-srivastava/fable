@@ -2,8 +2,6 @@ import { useCallback, useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json, jsonParseLinter } from '@codemirror/lang-json'
 import { linter } from '@codemirror/lint'
-import { useTheme } from '@/components/ThemeProvider'
-import { getFableCodeMirrorTheme } from '@/lib/codemirror-fable-theme'
 import {
   AlertCircle,
   AlertTriangle,
@@ -11,7 +9,9 @@ import {
   FileText,
   X,
 } from 'lucide-react'
-import { MAX_BLOB_SIZE, formatBytes, validateJSON } from '@/lib/validators'
+import { useTheme } from '@/components/ThemeProvider'
+import { getFableCodeMirrorTheme } from '@/lib/codemirror-fable-theme'
+import { MAX_BLOB_SIZE, formatBytes, parseJSONInput } from '@/lib/validators'
 import { cn } from '@/lib/utils'
 
 interface JsonEditorProps {
@@ -45,23 +45,36 @@ export function JsonEditor({
     []
   )
 
-  const validation = useMemo(() => validateJSON(value), [value])
-
-  const { formatted, parseError } = useMemo(() => {
+  const { validation, formatted, parseError } = useMemo(() => {
     const isEmpty = value.trim() === ''
-    if (isEmpty) return { formatted: '', parseError: null }
-    try {
-      const parsed = JSON.parse(value) as unknown
-      return { formatted: JSON.stringify(parsed, null, 2), parseError: null }
-    } catch (e) {
+    if (isEmpty) {
       return {
+        validation: { valid: true as const, size: 0 },
         formatted: '',
-        parseError: e instanceof Error ? e.message : 'Invalid JSON',
+        parseError: null as string | null,
       }
+    }
+
+    const result = parseJSONInput(value)
+    if (result.ok) {
+      return {
+        validation: { valid: true as const, size: result.size },
+        formatted: JSON.stringify(result.parsed, null, 2),
+        parseError: null as string | null,
+      }
+    }
+
+    return {
+      validation: {
+        valid: false as const,
+        error: result.error,
+        size: result.size,
+      },
+      formatted: '',
+      parseError: result.error,
     }
   }, [value])
 
-  // Memoize onChange handler to prevent unnecessary re-renders
   const handleChange = useCallback(
     (newValue: string) => {
       onChange?.(newValue)
@@ -69,7 +82,6 @@ export function JsonEditor({
     [onChange]
   )
 
-  // Calculate size percentage for visual feedback
   const sizePercentage = useMemo(() => {
     if (!validation.size) return 0
     return Math.min((validation.size / MAX_BLOB_SIZE) * 100, 100)
@@ -103,14 +115,12 @@ export function JsonEditor({
           />
         </div>
 
-        {/* Status bar with validation info */}
         {value.length > 0 && validation.size !== undefined && (
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
                 {formatBytes(validation.size)} / {formatBytes(MAX_BLOB_SIZE)}
               </p>
-              {/* Size indicator bar */}
               <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
                   className={cn(
@@ -126,13 +136,13 @@ export function JsonEditor({
               </div>
             </div>
 
-            {/* Validation status */}
             {validation.valid ? (
               <span className="text-xs text-success flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" />
                 Valid JSON
               </span>
             ) : (
+              'error' in validation &&
               validation.error && (
                 <span className="text-xs text-destructive flex items-center gap-1">
                   <X className="w-3.5 h-3.5" />
@@ -143,7 +153,6 @@ export function JsonEditor({
           </div>
         )}
 
-        {/* External error message */}
         {error && (
           <p className="text-sm text-destructive flex items-center gap-1.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -154,7 +163,6 @@ export function JsonEditor({
     )
   }
 
-  // View mode
   const isEmpty = value.trim() === ''
   if (isEmpty) {
     return (

@@ -1,6 +1,6 @@
 import { httpRouter } from 'convex/server'
 import { httpAction } from './_generated/server'
-import { api, internal } from './_generated/api'
+import { api } from './_generated/api'
 
 const http = httpRouter()
 
@@ -8,25 +8,6 @@ http.route({
   path: '/api/blob',
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      'unknown'
-
-    try {
-      await ctx.runMutation(internal.rateLimit.checkAndIncrement, {
-        ip,
-        now: Date.now(),
-      })
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded' }),
-        {
-          status: 429,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
-    }
-
     let body: unknown
     try {
       body = await request.json()

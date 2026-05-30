@@ -9,10 +9,7 @@ export interface JsonEditorPanelFields {
   onSubmit: () => Promise<void>
   title?: string
   description?: string
-  blobUrl?: string | null
-  onCopyUrl?: () => void
-  copied?: boolean
-  onReset?: () => void
+  onReset: () => void
 }
 
 export type JsonEditorPanelHeaderProps = Pick<
@@ -22,20 +19,15 @@ export type JsonEditorPanelHeaderProps = Pick<
   mode: 'create' | 'view'
 }
 
-export type BlobCreatedAlertProps = Required<Pick<JsonEditorPanelFields, 'blobUrl'>> &
-  Pick<JsonEditorPanelFields, 'onCopyUrl' | 'copied'>
-
-export type BlobEditorActionsProps = Required<
-  Pick<JsonEditorPanelFields, 'onReset'>
-> &
-  Pick<
-    JsonEditorPanelFields,
-    'onSubmit' | 'blobUrl' | 'onCopyUrl' | 'copied'
-  > & {
-    disabled: boolean
-    /** When true, show CopySnippet (view mode); when false and blobUrl set, show BlobCreatedAlert (create mode) */
-    showCopySnippet: boolean
-  }
+export type BlobEditorActionsProps = Pick<
+  JsonEditorPanelFields,
+  'onSubmit' | 'onReset'
+> & {
+  disabled: boolean
+} & (
+  | { mode: 'create' }
+  | { mode: 'view'; blobUrl: string }
+)
 
 export type JsonEditorGridProps = Pick<
   JsonEditorPanelFields,
@@ -44,7 +36,7 @@ export type JsonEditorGridProps = Pick<
 
 type BaseProps = Pick<
   JsonEditorPanelFields,
-  'value' | 'onChange' | 'error' | 'onSubmit'
+  'value' | 'onChange' | 'error' | 'onSubmit' | 'onReset'
 >
 
 export type JsonEditorPanelProps =
@@ -52,15 +44,10 @@ export type JsonEditorPanelProps =
       mode: 'create'
       title?: string
       description?: string
-      blobUrl?: string | null
-      onCopyUrl?: () => void
-      copied?: boolean
-      onReset: () => void
     })
   | (BaseProps & {
       mode: 'view'
       title?: string
       description?: string
       blobUrl: string
-      onReset: () => void
     })

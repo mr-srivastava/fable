@@ -1,39 +1,49 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
-import { validateJSON } from '@/lib/validators'
+import { useValidatedBlobSubmit } from '@/hooks/use-validated-blob-submit'
+import { parseBlobId } from '@/lib/blob-id'
 
 export const Route = createFileRoute('/blob/$id')({
   component: ViewBlob,
 })
 
+function BlobNotFound() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6">
+      <p className="font-medium text-destructive">Blob not found</p>
+      <Link to="/" className="font-medium text-primary hover:underline">
+        Create a blob
+      </Link>
+    </div>
+  )
+}
+
 function BlobEditor({
   id,
   blob,
 }: {
-  id: string
+  id: Id<'blobs'>
   blob: Doc<'blobs'>
 }) {
   const [json, setJson] = useState(blob.data)
-  const [error, setError] = useState<string | null>(null)
   const updateBlob = useMutation(api.blobs.update)
 
-  const handleUpdate = async () => {
-    setError(null)
-    const validation = validateJSON(json)
-    if (!validation.valid) {
-      setError(validation.error ?? 'Invalid JSON')
-      return
-    }
-    try {
-      await updateBlob({ id: id as Id<'blobs'>, data: json })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update blob')
-    }
-  }
+  const submitBlob = useCallback(
+    async (data: string) => {
+      await updateBlob({ id, data })
+    },
+    [id, updateBlob],
+  )
+
+  const { error, handleSubmit } = useValidatedBlobSubmit(
+    () => json,
+    submitBlob,
+    'Failed to update blob',
+  )
 
   const blobUrl =
     typeof window !== 'undefined'
@@ -56,7 +66,7 @@ function BlobEditor({
           value={json}
           onChange={setJson}
           error={error ?? undefined}
-          onSubmit={handleUpdate}
+          onSubmit={handleSubmit}
           title="JSON blob"
           description={`Last updated ${updatedAtFormatted}`}
           blobUrl={blobUrl}
@@ -68,8 +78,13 @@ function BlobEditor({
 }
 
 function ViewBlob() {
-  const { id } = Route.useParams()
-  const blob = useQuery(api.blobs.get, { id: id as Id<'blobs'> })
+  const { id: rawId } = Route.useParams()
+  const id = parseBlobId(rawId)
+  const blob = useQuery(api.blobs.get, id ? { id } : 'skip')
+
+  if (!id) {
+    return <BlobNotFound />
+  }
 
   if (blob === undefined) {
     return (
@@ -80,14 +95,7 @@ function ViewBlob() {
   }
 
   if (blob === null) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6">
-        <p className="font-medium text-destructive">Blob not found</p>
-        <Link to="/" className="font-medium text-primary hover:underline">
-          Create a blob
-        </Link>
-      </div>
-    )
+    return <BlobNotFound />
   }
 
   return <BlobEditor key={blob._id} id={id} blob={blob} />

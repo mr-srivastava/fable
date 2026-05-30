@@ -10,7 +10,6 @@
 
 import type * as blobs from "../blobs.js";
 import type * as http from "../http.js";
-import type * as rateLimit from "../rateLimit.js";
 
 import type {
   ApiFromModules,
@@ -21,7 +20,6 @@ import type {
 declare const fullApi: ApiFromModules<{
   blobs: typeof blobs;
   http: typeof http;
-  rateLimit: typeof rateLimit;
 }>;
 
 /**

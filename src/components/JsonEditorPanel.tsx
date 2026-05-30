@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type {
   JsonEditorGridProps,
   JsonEditorPanelHeaderProps,
@@ -5,6 +6,7 @@ import type {
 } from './JsonEditorPanel.types'
 import { JsonEditor } from '@/components/JsonEditor'
 import { BlobEditorActions } from '@/components/BlobEditorActions'
+import { validateJSON } from '@/lib/validators'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
@@ -75,21 +77,27 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     onChange,
     error,
     onSubmit,
+    onReset,
     description: descriptionProp,
     title,
+    mode,
   } = props
 
-  const isCreate = props.mode === 'create'
+  const isCreate = mode === 'create'
   const description =
     descriptionProp ?? (isCreate ? CREATE_DEFAULTS.description : undefined)
 
-  const submitDisabled = !value.trim()
+  const submitDisabled = useMemo(() => {
+    const trimmed = value.trim()
+    if (!trimmed) return true
+    return !validateJSON(value).valid
+  }, [value])
 
   return (
     <>
       <section className={isCreate ? 'space-y-8 pb-20' : 'space-y-6 pb-20'}>
         <JsonEditorPanelHeader
-          mode={props.mode}
+          mode={mode}
           title={title}
           description={description}
         />
@@ -97,12 +105,11 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
       </section>
       <BlobEditorActions
         onSubmit={onSubmit}
-        onReset={props.onReset}
+        onReset={onReset}
         disabled={submitDisabled}
-        blobUrl={props.mode === 'create' ? props.blobUrl : props.blobUrl}
-        onCopyUrl={props.mode === 'create' ? props.onCopyUrl : undefined}
-        copied={props.mode === 'create' ? props.copied : undefined}
-        showCopySnippet={!isCreate}
+        {...(mode === 'view'
+          ? { mode: 'view', blobUrl: props.blobUrl }
+          : { mode: 'create' })}
       />
     </>
   )

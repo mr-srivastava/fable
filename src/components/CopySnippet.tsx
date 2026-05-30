@@ -1,6 +1,4 @@
-import { useState } from 'react'
-import { Check, Copy } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { CopyButton } from '@/components/CopyButton'
 
 interface CopySnippetProps {
   url: string
@@ -30,36 +28,14 @@ function getSnippet(type: SnippetType, url: string): string {
 }
 
 export function CopySnippet({ url }: CopySnippetProps) {
-  const [copiedType, setCopiedType] = useState<SnippetType | null>(null)
-
-  const handleCopy = async (type: SnippetType) => {
-    const snippet = getSnippet(type, url)
-    try {
-      await navigator.clipboard.writeText(snippet)
-      setCopiedType(type)
-      setTimeout(() => setCopiedType(null), 2000)
-    } catch {
-      // ignore
-    }
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-2">
       {(['url', 'curl', 'fetch'] as const).map((type) => (
-        <Button
+        <CopyButton
           key={type}
-          variant="outline"
-          size="sm"
-          onClick={() => handleCopy(type)}
-          className="gap-2"
-        >
-          {copiedType === type ? (
-            <Check className="h-4 w-4 text-success" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-          {SNIPPET_LABELS[type]}
-        </Button>
+          text={getSnippet(type, url)}
+          label={SNIPPET_LABELS[type]}
+        />
       ))}
     </div>
   )

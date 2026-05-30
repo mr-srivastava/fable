@@ -1,53 +1,9 @@
-import { Check, Copy } from 'lucide-react'
-import type { BlobCreatedAlertProps, BlobEditorActionsProps } from './JsonEditorPanel.types'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import type { BlobEditorActionsProps } from './JsonEditorPanel.types'
 import { Button } from '@/components/ui/button'
 import { CopySnippet } from '@/components/CopySnippet'
 
-function BlobCreatedAlert({
-  blobUrl,
-  onCopyUrl,
-  copied,
-}: BlobCreatedAlertProps) {
-  return (
-    <Alert className="flex-1 min-w-0 py-2">
-      <AlertDescription>
-        <div className="flex items-center gap-2">
-          <span className="font-medium shrink-0">Blob created</span>
-          <code className="flex-1 truncate rounded bg-muted px-2 py-1 text-sm min-w-0">
-            {blobUrl}
-          </code>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onCopyUrl}
-            aria-label="Copy URL"
-            className="shrink-0"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-success" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
-  )
-}
-
-export function BlobEditorActions({
-  onSubmit,
-  onReset,
-  disabled,
-  blobUrl,
-  onCopyUrl,
-  copied,
-  showCopySnippet,
-}: BlobEditorActionsProps) {
-  const showBlobCreatedAlert =
-    !showCopySnippet && blobUrl != null && blobUrl !== ''
-  const showSnippet = showCopySnippet && blobUrl
+export function BlobEditorActions(props: BlobEditorActionsProps) {
+  const { onSubmit, onReset, disabled, mode } = props
 
   return (
     <div
@@ -66,16 +22,7 @@ export function BlobEditorActions({
         <Button variant="outline" onClick={onReset}>
           Reset
         </Button>
-        {showBlobCreatedAlert && (
-          <BlobCreatedAlert
-            blobUrl={blobUrl}
-            onCopyUrl={onCopyUrl}
-            copied={copied}
-          />
-        )}
-        {showSnippet && typeof blobUrl === 'string' && (
-          <CopySnippet url={blobUrl} />
-        )}
+        {mode === 'view' && <CopySnippet url={props.blobUrl} />}
       </div>
     </div>
   )
