@@ -1,5 +1,7 @@
+import { Info } from 'lucide-react'
 import { ContractFieldRow } from './ContractFieldRow'
 import type { JsonContract, JsonContractField } from '@/types/contract'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Empty,
   EmptyDescription,
@@ -51,10 +53,22 @@ export function ContractPanel({
           <p className="text-sm text-muted-foreground">
             {disabled
               ? 'Valid JSON will infer fields here.'
-              : `${fields.length} inferred field${fields.length === 1 ? '' : 's'}`}
+              : `${fields.length} field${fields.length === 1 ? '' : 's'} inferred from the current JSON example`}
           </p>
         </div>
       </div>
+
+      {!disabled && fields.length > 0 && (
+        <Alert className="border-dashed bg-muted/30">
+          <Info aria-hidden="true" />
+          <AlertTitle>Inferred contract overlay</AlertTitle>
+          <AlertDescription>
+            Edit metadata for paths found in this JSON example. New fields,
+            renamed paths, deleted paths, and alternate response shapes are out
+            of scope for this version.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="overflow-hidden rounded-md border bg-card">
         {disabled || fields.length === 0 ? (
@@ -62,7 +76,8 @@ export function ContractPanel({
             <EmptyHeader>
               <EmptyTitle>No contract fields</EmptyTitle>
               <EmptyDescription>
-                Valid JSON will infer editable contract metadata here.
+                Valid JSON will infer editable metadata for paths present in the
+                example.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
