@@ -4,8 +4,9 @@ import type {
   JsonEditorPanelHeaderProps,
   JsonEditorPanelProps,
 } from './JsonEditorPanel.types'
+import { ContractPanel } from '@/components/contract/ContractPanel'
+import { DocumentEditorActions } from '@/components/DocumentEditorActions'
 import { JsonEditor } from '@/components/JsonEditor'
-import { BlobEditorActions } from '@/components/BlobEditorActions'
 import { validateJSON } from '@/lib/validators'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
@@ -81,6 +82,9 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     description: descriptionProp,
     title,
     mode,
+    contract,
+    onContractChange,
+    contractDisabled,
   } = props
 
   const isCreate = mode === 'create'
@@ -102,13 +106,18 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           description={description}
         />
         <JsonEditorGrid value={value} onChange={onChange} error={error} />
+        <ContractPanel
+          contract={contract}
+          disabled={contractDisabled}
+          onChange={onContractChange}
+        />
       </section>
-      <BlobEditorActions
+      <DocumentEditorActions
         onSubmit={onSubmit}
         onReset={onReset}
         disabled={submitDisabled}
         {...(mode === 'view'
-          ? { mode: 'view', blobUrl: props.blobUrl }
+          ? { mode: 'view', documentUrl: props.documentUrl }
           : { mode: 'create' })}
       />
     </>

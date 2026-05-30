@@ -24,7 +24,7 @@ http.route({
     const data = JSON.stringify(body)
 
     try {
-      const blobId = await ctx.runMutation(api.blobs.create, { data })
+      const blobId = await ctx.runMutation(api.documents.create, { data })
       const siteUrl =
         process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? 'http://localhost:3000'
       const url = `${siteUrl}/blob/${blobId}`

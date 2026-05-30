@@ -1,20 +1,22 @@
 import {
+  
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
-  type ReactNode,
+  useState
 } from 'react'
+import type {ReactNode} from 'react';
+import type {Theme} from '@/hooks/use-theme';
 import { invalidateFableCodeMirrorThemeCache } from '@/lib/codemirror-fable-theme'
 import {
+  STORAGE_KEY,
+  
   applyTheme,
   getResolvedTheme,
   getStoredTheme,
-  getSystemTheme,
-  STORAGE_KEY,
-  type Theme,
+  getSystemTheme
 } from '@/hooks/use-theme'
 
 type ThemeContextValue = {

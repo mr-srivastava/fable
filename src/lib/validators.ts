@@ -1,4 +1,6 @@
-export const MAX_BLOB_SIZE = 102400 // 100KB in bytes
+import { MAX_JSON_SIZE, parseJsonSafely } from '@/lib/json'
+
+export const MAX_BLOB_SIZE = MAX_JSON_SIZE
 
 export interface ValidationResult {
   valid: boolean
@@ -11,25 +13,10 @@ type ParseJSONResult =
   | { ok: false; error: string; size?: number }
 
 export function parseJSONInput(input: string): ParseJSONResult {
-  try {
-    const parsed = JSON.parse(input)
-    const size = new Blob([input]).size
-
-    if (size > MAX_BLOB_SIZE) {
-      return {
-        ok: false,
-        error: `JSON too large: ${size} bytes (max ${MAX_BLOB_SIZE})`,
-        size,
-      }
-    }
-
-    return { ok: true, parsed, size }
-  } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Invalid JSON',
-    }
-  }
+  const result = parseJsonSafely(input)
+  return result.ok
+    ? { ok: true, parsed: result.value, size: result.size }
+    : result
 }
 
 export function validateJSON(input: string): ValidationResult {

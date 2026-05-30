@@ -1,8 +1,8 @@
-import type { BlobEditorActionsProps } from './JsonEditorPanel.types'
+import type { DocumentEditorActionsProps } from './JsonEditorPanel.types'
 import { Button } from '@/components/ui/button'
 import { CopySnippet } from '@/components/CopySnippet'
 
-export function BlobEditorActions(props: BlobEditorActionsProps) {
+export function DocumentEditorActions(props: DocumentEditorActionsProps) {
   const { onSubmit, onReset, disabled, mode } = props
 
   return (
@@ -22,7 +22,7 @@ export function BlobEditorActions(props: BlobEditorActionsProps) {
         <Button variant="outline" onClick={onReset}>
           Reset
         </Button>
-        {mode === 'view' && <CopySnippet url={props.blobUrl} />}
+        {mode === 'view' && <CopySnippet url={props.documentUrl} />}
       </div>
     </div>
   )

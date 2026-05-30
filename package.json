@@ -13,6 +13,7 @@
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lint": "^6.9.6",
+    "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.43.0",
     "@convex-dev/react-query": "0.1.0",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -33,6 +34,7 @@
     "convex": "^1.27.3",
     "lucide-react": "^0.561.0",
     "nitro": "npm:nitro-nightly@latest",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.0.2",

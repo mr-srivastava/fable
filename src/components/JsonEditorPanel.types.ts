@@ -1,6 +1,4 @@
-// ---------------------------------------------------------------------------
-// Types: single superset, then Pick-derived interfaces
-// ---------------------------------------------------------------------------
+import type { JsonContract } from '@/types/contract'
 
 export interface JsonEditorPanelFields {
   value: string
@@ -10,6 +8,9 @@ export interface JsonEditorPanelFields {
   title?: string
   description?: string
   onReset: () => void
+  contract?: JsonContract
+  onContractChange: (contract: JsonContract) => void
+  contractDisabled?: boolean
 }
 
 export type JsonEditorPanelHeaderProps = Pick<
@@ -19,14 +20,14 @@ export type JsonEditorPanelHeaderProps = Pick<
   mode: 'create' | 'view'
 }
 
-export type BlobEditorActionsProps = Pick<
+export type DocumentEditorActionsProps = Pick<
   JsonEditorPanelFields,
   'onSubmit' | 'onReset'
 > & {
   disabled: boolean
 } & (
   | { mode: 'create' }
-  | { mode: 'view'; blobUrl: string }
+  | { mode: 'view'; documentUrl: string }
 )
 
 export type JsonEditorGridProps = Pick<
@@ -36,7 +37,14 @@ export type JsonEditorGridProps = Pick<
 
 type BaseProps = Pick<
   JsonEditorPanelFields,
-  'value' | 'onChange' | 'error' | 'onSubmit' | 'onReset'
+  | 'value'
+  | 'onChange'
+  | 'error'
+  | 'onSubmit'
+  | 'onReset'
+  | 'contract'
+  | 'onContractChange'
+  | 'contractDisabled'
 >
 
 export type JsonEditorPanelProps =
@@ -49,5 +57,5 @@ export type JsonEditorPanelProps =
       mode: 'view'
       title?: string
       description?: string
-      blobUrl: string
+      documentUrl: string
     })

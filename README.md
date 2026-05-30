@@ -1,6 +1,8 @@
 # Fable
 
-**Fable** is a minimal JSON paste app: create or edit JSON, save it to the cloud, and share it via a link. Each blob gets a unique URL you can open to view or edit the JSON. Built with React, TanStack Router, Convex, and Tailwind.
+**Fable** is a minimal JSON document app: create or edit JSON, infer lightweight contract metadata, save it to the cloud, and share it via a link. Each document gets a unique URL you can open to view or edit the JSON and contract. Built with React, TanStack Router, Convex, and Tailwind.
+
+> Internal storage now uses the Convex `documents` table. Existing local `blobs` data may need a one-time manual migration if you want to keep old records.
 
 # Getting Started
 

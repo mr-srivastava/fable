@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { validateJSON } from '@/lib/validators'
 
-export function useValidatedBlobSubmit(
+export function useValidatedDocumentSubmit(
   getJson: () => string,
   onSubmit: (json: string) => Promise<void>,
   failureMessage: string,
