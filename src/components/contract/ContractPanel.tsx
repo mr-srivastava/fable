@@ -58,14 +58,14 @@ export function ContractPanel({
           <p className="text-sm text-muted-foreground">
             {disabled
               ? 'Valid JSON will infer inspectable fields here.'
-              : `${fields.length} field${fields.length === 1 ? '' : 's'} inferred from the current JSON example`}
+              : `${fields.length} field${fields.length === 1 ? '' : 's'} inferred from the current examples`}
           </p>
         </div>
       </div>
 
       {!disabled && fields.length > 0 && (
         <p className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          Inferred from current payload. Edit field metadata only.
+          Inferred from saved examples. Edit field metadata only.
         </p>
       )}
 

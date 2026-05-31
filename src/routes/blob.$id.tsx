@@ -1,13 +1,18 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
 import type { JsonContract } from '@/types/contract'
+import type { JsonDocumentExample } from '@/types/document'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useValidatedDocumentSubmit } from '@/hooks/use-validated-document-submit'
-import { inferContractFromJson } from '@/lib/contract/inferContract'
+import { inferContractFromExamples } from '@/lib/contract/inferContract'
 import { mergeContractEdits } from '@/lib/contract/mergeContractEdits'
+import {
+  createDocumentExample,
+  normalizeDocumentExamples,
+} from '@/lib/document-examples'
 import { parseDocumentId } from '@/lib/document-id'
 import { parseJsonSafely } from '@/lib/json'
 
@@ -31,8 +36,12 @@ function getInitialContract(
 ): JsonContract | undefined {
   if (document.contract) return document.contract as JsonContract
 
-  const parsed = parseJsonSafely(document.data)
-  return parsed.ok ? inferContractFromJson(parsed.value) : undefined
+  const examples = normalizeDocumentExamples(document)
+  const allExamplesAreValid = examples.every(
+    (example) => parseJsonSafely(example.data).ok,
+  )
+
+  return allExamplesAreValid ? inferContractFromExamples(examples) : undefined
 }
 
 function DocumentEditor({
@@ -42,36 +51,116 @@ function DocumentEditor({
   id: Id<'documents'>
   document: Doc<'documents'>
 }) {
-  const [json, setJson] = useState(document.data)
+  const initialExamples = useMemo(
+    () => normalizeDocumentExamples(document),
+    [document],
+  )
+  const [examples, setExamples] =
+    useState<Array<JsonDocumentExample>>(initialExamples)
+  const [activeExampleId, setActiveExampleId] = useState(initialExamples[0].id)
   const [contract, setContract] = useState<JsonContract | undefined>(() =>
     getInitialContract(document),
   )
   const [contractDisabled, setContractDisabled] = useState(false)
   const updateDocument = useMutation(api.documents.update)
 
-  const handleJsonChange = useCallback((value: string) => {
-    setJson(value)
+  const activeExample = useMemo(
+    () =>
+      examples.find((example) => example.id === activeExampleId) ??
+      examples[0],
+    [activeExampleId, examples],
+  )
 
-    const parsed = parseJsonSafely(value)
-    if (!parsed.ok) {
-      setContractDisabled(true)
-      return
-    }
+  const updateContractFromExamples = useCallback(
+    (nextExamples: Array<JsonDocumentExample>) => {
+      const allExamplesAreValid = nextExamples.every(
+        (example) => parseJsonSafely(example.data).ok,
+      )
 
-    const inferred = inferContractFromJson(parsed.value)
-    setContract((current) => mergeContractEdits(inferred, current))
-    setContractDisabled(false)
+      if (!allExamplesAreValid) {
+        setContractDisabled(true)
+        return
+      }
+
+      const inferred = inferContractFromExamples(nextExamples)
+      setContract((current) => mergeContractEdits(inferred, current))
+      setContractDisabled(false)
+    },
+    [],
+  )
+
+  const handleJsonChange = useCallback(
+    (value: string) => {
+      const now = Date.now()
+      const nextExamples = examples.map((example) =>
+        example.id === activeExampleId
+          ? { ...example, data: value, updatedAt: now }
+          : example,
+      )
+
+      setExamples(nextExamples)
+      updateContractFromExamples(nextExamples)
+    },
+    [activeExampleId, examples, updateContractFromExamples],
+  )
+
+  const handleRenameExample = useCallback((exampleId: string, name: string) => {
+    setExamples((current) =>
+      current.map((example) =>
+        example.id === exampleId
+          ? { ...example, name, updatedAt: Date.now() }
+          : example,
+      ),
+    )
   }, [])
 
-  const submitDocument = useCallback(
-    async (data: string) => {
-      await updateDocument({ id, data, contract })
+  const handleAddExample = useCallback(() => {
+    const nextExample = createDocumentExample(examples.length + 1)
+    const nextExamples = [...examples, nextExample]
+    setExamples(nextExamples)
+    setActiveExampleId(nextExample.id)
+    updateContractFromExamples(nextExamples)
+  }, [examples, updateContractFromExamples])
+
+  const handleDeleteExample = useCallback(
+    (exampleId: string) => {
+      if (examples.length === 1) return
+
+      const nextExamples = examples.filter(
+        (example) => example.id !== exampleId,
+      )
+      setExamples(nextExamples)
+      if (activeExampleId === exampleId) {
+        setActiveExampleId(nextExamples[0].id)
+      }
+      updateContractFromExamples(nextExamples)
     },
-    [contract, id, updateDocument],
+    [activeExampleId, examples, updateContractFromExamples],
+  )
+
+  const submitDocument = useCallback(
+    async () => {
+      if (examples.length === 0) {
+        throw new Error('At least one example is required')
+      }
+
+      if (examples.some((example) => !parseJsonSafely(example.data).ok)) {
+        throw new Error('All examples must contain valid JSON')
+      }
+
+      const firstExample = examples[0]
+      await updateDocument({
+        id,
+        data: firstExample.data,
+        examples,
+        contract,
+      })
+    },
+    [contract, examples, id, updateDocument],
   )
 
   const { error, handleSubmit } = useValidatedDocumentSubmit(
-    () => json,
+    () => activeExample.data,
     submitDocument,
     'Failed to update document',
   )
@@ -94,8 +183,14 @@ function DocumentEditor({
       <div className="space-y-6">
         <JsonEditorPanel
           mode="view"
-          value={json}
+          value={activeExample.data}
           onChange={handleJsonChange}
+          examples={examples}
+          activeExampleId={activeExampleId}
+          onSelectExample={setActiveExampleId}
+          onRenameExample={handleRenameExample}
+          onAddExample={handleAddExample}
+          onDeleteExample={handleDeleteExample}
           error={error ?? undefined}
           onSubmit={handleSubmit}
           title="Saved specimen"
@@ -105,7 +200,8 @@ function DocumentEditor({
           onContractChange={setContract}
           contractDisabled={contractDisabled}
           onReset={() => {
-            setJson(document.data)
+            setExamples(initialExamples)
+            setActiveExampleId(initialExamples[0].id)
             setContract(getInitialContract(document))
             setContractDisabled(false)
           }}

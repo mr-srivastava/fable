@@ -3,6 +3,7 @@ import type {
   JsonContractField,
   JsonFieldType,
 } from '@/types/contract'
+import type { JsonDocumentExample } from '@/types/document'
 
 type FieldAccumulator = {
   path: string
@@ -10,6 +11,13 @@ type FieldAccumulator = {
   required: boolean
   nullable: boolean
   seen: number
+}
+
+type ExampleFieldAccumulator = {
+  path: string
+  type: JsonFieldType
+  nullable: boolean
+  seenInExamples: Set<number>
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -62,6 +70,30 @@ function upsertField(
   existing.required = existing.required && required
   existing.nullable = existing.nullable || value === null
   existing.seen += 1
+}
+
+function upsertExampleField(
+  fields: Map<string, ExampleFieldAccumulator>,
+  path: string,
+  value: unknown,
+  exampleIndex: number,
+) {
+  const nextType = getValueType(value)
+  const existing = fields.get(path)
+
+  if (!existing) {
+    fields.set(path, {
+      path,
+      type: nextType,
+      nullable: value === null,
+      seenInExamples: new Set([exampleIndex]),
+    })
+    return
+  }
+
+  existing.type = combineTypes(existing.type, nextType)
+  existing.nullable = existing.nullable || value === null
+  existing.seenInExamples.add(exampleIndex)
 }
 
 function walkValue(
@@ -120,6 +152,60 @@ function walkArray(
   }
 }
 
+function walkExampleValue(
+  value: unknown,
+  path: string,
+  fields: Map<string, ExampleFieldAccumulator>,
+  exampleIndex: number,
+) {
+  if (path) {
+    upsertExampleField(fields, path, value, exampleIndex)
+  }
+
+  if (Array.isArray(value)) {
+    walkExampleArray(value, path, fields, exampleIndex)
+    return
+  }
+
+  if (isPlainObject(value)) {
+    for (const [key, childValue] of Object.entries(value)) {
+      walkExampleValue(
+        childValue,
+        path ? `${path}.${key}` : key,
+        fields,
+        exampleIndex,
+      )
+    }
+  }
+}
+
+function walkExampleArray(
+  items: Array<unknown>,
+  arrayPath: string,
+  fields: Map<string, ExampleFieldAccumulator>,
+  exampleIndex: number,
+) {
+  if (items.length === 0) return
+
+  const itemPath = `${arrayPath}[]`
+  const objectItems = items.filter(isPlainObject)
+
+  if (objectItems.length > 0) {
+    const keys = new Set(objectItems.flatMap((item) => Object.keys(item)))
+    for (const key of keys) {
+      for (const item of objectItems) {
+        if (Object.prototype.hasOwnProperty.call(item, key)) {
+          walkExampleValue(item[key], `${itemPath}.${key}`, fields, exampleIndex)
+        }
+      }
+    }
+  } else {
+    for (const item of items) {
+      walkExampleValue(item, itemPath, fields, exampleIndex)
+    }
+  }
+}
+
 export function inferContractFromJson(value: unknown): JsonContract {
   const fields = new Map<string, FieldAccumulator>()
   walkValue(value, '', fields, true)
@@ -130,6 +216,30 @@ export function inferContractFromJson(value: unknown): JsonContract {
     path,
     type,
     required,
+    nullable,
+  }))
+
+  return {
+    version: 1,
+    fields: contractFields.sort((a, b) => a.path.localeCompare(b.path)),
+  }
+}
+
+export function inferContractFromExamples(
+  examples: Array<JsonDocumentExample>,
+): JsonContract {
+  const fields = new Map<string, ExampleFieldAccumulator>()
+
+  examples.forEach((example, index) => {
+    walkExampleValue(JSON.parse(example.data), '', fields, index)
+  })
+
+  const contractFields: Array<JsonContractField> = Array.from(
+    fields.values(),
+  ).map(({ path, type, nullable, seenInExamples }) => ({
+    path,
+    type,
+    required: seenInExamples.size === examples.length,
     nullable,
   }))
 

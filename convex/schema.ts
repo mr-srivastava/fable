@@ -4,6 +4,17 @@ import { v } from 'convex/values'
 export default defineSchema({
   documents: defineTable({
     data: v.string(),
+    examples: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          data: v.string(),
+          createdAt: v.number(),
+          updatedAt: v.optional(v.number()),
+        }),
+      ),
+    ),
     size: v.number(),
     updatedAt: v.optional(v.number()),
     metadata: v.optional(

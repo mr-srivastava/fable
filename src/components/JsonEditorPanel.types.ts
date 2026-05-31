@@ -1,8 +1,15 @@
 import type { JsonContract } from '@/types/contract'
+import type { JsonDocumentExample } from '@/types/document'
 
 export interface JsonEditorPanelFields {
   value: string
   onChange: (value: string) => void
+  examples?: Array<JsonDocumentExample>
+  activeExampleId?: string
+  onSelectExample?: (id: string) => void
+  onRenameExample?: (id: string, name: string) => void
+  onAddExample?: () => void
+  onDeleteExample?: (id: string) => void
   error?: string
   onSubmit: () => Promise<void>
   title?: string
@@ -39,6 +46,12 @@ type BaseProps = Pick<
   JsonEditorPanelFields,
   | 'value'
   | 'onChange'
+  | 'examples'
+  | 'activeExampleId'
+  | 'onSelectExample'
+  | 'onRenameExample'
+  | 'onAddExample'
+  | 'onDeleteExample'
   | 'error'
   | 'onSubmit'
   | 'onReset'
