@@ -4,6 +4,54 @@ const DEFAULT_EXAMPLE_ID = 'default'
 const DEFAULT_EXAMPLE_NAME = 'Example'
 const NEW_EXAMPLE_DATA = '{\n  \n}'
 
+const DEFAULT_CREATE_EXAMPLES = [
+  {
+    name: 'Success',
+    data: {
+      status: 'success',
+      requestId: 'req_01JH9ZK7Q6M2Y4P8N3R5T1A0BC',
+      data: {
+        id: 'user_123',
+        name: 'Avery Stone',
+        email: 'avery@example.com',
+        plan: 'pro',
+        verified: true,
+        lastLoginAt: '2026-05-31T09:30:00Z',
+      },
+      error: null,
+    },
+  },
+  {
+    name: 'Error',
+    data: {
+      status: 'error',
+      requestId: 'req_01JH9ZK9E8X5F2VCQ7TD4MBH2K',
+      data: null,
+      error: {
+        code: 'USER_NOT_FOUND',
+        message: 'No user exists for the supplied identifier.',
+        retryable: false,
+      },
+    },
+  },
+  {
+    name: 'Null State',
+    data: {
+      status: 'success',
+      requestId: 'req_01JH9ZKCPK9M7EA3YB6QK2W4ZD',
+      data: {
+        id: 'user_456',
+        name: null,
+        email: 'pending@example.com',
+        plan: 'free',
+        verified: false,
+        lastLoginAt: null,
+      },
+      error: null,
+    },
+  },
+] as const
+
 type DocumentWithExamples = {
   data: string
   _creationTime?: number
@@ -21,15 +69,26 @@ export function createExampleId(): string {
 export function createDocumentExample(
   index: number,
   data = NEW_EXAMPLE_DATA,
+  name = `Example ${index}`,
 ): JsonDocumentExample {
   const now = Date.now()
 
   return {
     id: createExampleId(),
-    name: `Example ${index}`,
+    name,
     data,
     createdAt: now,
   }
+}
+
+export function createDefaultDocumentExamples(): Array<JsonDocumentExample> {
+  return DEFAULT_CREATE_EXAMPLES.map((example, index) =>
+    createDocumentExample(
+      index + 1,
+      JSON.stringify(example.data, null, 2),
+      example.name,
+    ),
+  )
 }
 
 export function normalizeDocumentExamples(

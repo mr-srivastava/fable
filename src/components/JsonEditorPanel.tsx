@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { AlertTriangle, Check } from 'lucide-react'
 import type {
   JsonEditorGridProps,
   JsonEditorPanelHeaderProps,
@@ -8,7 +9,13 @@ import { ContractPanel } from '@/components/contract/ContractPanel'
 import { ExamplesTabs } from '@/components/examples/ExamplesTabs'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
 import { JsonEditor } from '@/components/JsonEditor'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -16,6 +23,7 @@ import {
 } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { validateJSON } from '@/lib/validators'
+import { cn } from '@/lib/utils'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
@@ -71,11 +79,116 @@ function getStatusBadge(status: PayloadStatus) {
   return 'Waiting'
 }
 
-function PayloadStatusBadge({ status }: { status: PayloadStatus }) {
+function PayloadStatusBadge({
+  status,
+  hasUnsavedChanges,
+}: {
+  status: PayloadStatus
+  hasUnsavedChanges?: boolean
+}) {
+  if (status === 'valid') {
+    return (
+      <Badge
+        variant="outline"
+        className={cn(
+          'gap-1.5 border-success/40 bg-success/10 text-success',
+          hasUnsavedChanges &&
+          'border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300',
+        )}
+      >
+        <span
+          className={cn(
+            'size-2 rounded-full bg-success',
+            hasUnsavedChanges &&
+            'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgb(251_191_36_/_0.18)]',
+          )}
+          aria-hidden="true"
+        />
+        {hasUnsavedChanges ? (
+          'Unsaved changes'
+        ) : (
+          <>
+            <Check className="size-3.5" />
+            Valid JSON
+          </>
+        )}
+      </Badge>
+    )
+  }
+
   return (
-    <Badge variant={status === 'valid' ? 'default' : 'secondary'}>
+    <Badge variant={status === 'invalid' ? 'default' : 'secondary'}>
       {getStatusBadge(status)}
     </Badge>
+  )
+}
+
+function ContractDiagnosticsNotice({
+  diagnostics,
+  examples,
+}: Pick<JsonEditorPanelProps, 'contractDiagnostics' | 'examples'>) {
+  const [dismissed, setDismissed] = useState(false)
+  const [showGroups, setShowGroups] = useState(false)
+
+  if (
+    dismissed ||
+    !diagnostics ||
+    diagnostics.severity !== 'warning' ||
+    !examples
+  ) {
+    return null
+  }
+
+  const exampleNameById = new Map(
+    examples.map((example) => [example.id, example.name]),
+  )
+
+  return (
+    <Alert className="border-amber-400/40 bg-amber-400/10 text-amber-950 dark:text-amber-100">
+      <AlertTriangle />
+      <AlertTitle>Likely separate contracts</AlertTitle>
+      <AlertDescription>
+        <p>
+          These examples look like separate response shapes. The contract below
+          is a broad union; consider splitting them into separate specimens.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            onClick={() => setDismissed(true)}
+          >
+            Keep as variants
+          </Button>
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            onClick={() => setShowGroups((current) => !current)}
+          >
+            Review groups
+          </Button>
+        </div>
+        {showGroups && (
+          <div className="mt-3 space-y-2 rounded-md border border-amber-400/30 bg-background/70 p-3">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Suggested groups
+            </p>
+            <ul className="space-y-1 text-sm">
+              {diagnostics.divergentGroups.map((group, index) => (
+                <li key={group.id}>
+                  <span className="font-medium">Group {index + 1}:</span>{' '}
+                  {group.exampleIds
+                    .map((id) => exampleNameById.get(id) ?? id)
+                    .join(', ')}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </AlertDescription>
+    </Alert>
   )
 }
 
@@ -90,6 +203,7 @@ function PayloadPanel({
   onRenameExample,
   onAddExample,
   onDeleteExample,
+  hasUnsavedChanges,
 }: JsonEditorGridProps & {
   status: PayloadStatus
   examples?: JsonEditorPanelProps['examples']
@@ -98,6 +212,7 @@ function PayloadPanel({
   onRenameExample?: (id: string, name: string) => void
   onAddExample?: () => void
   onDeleteExample?: (id: string) => void
+  hasUnsavedChanges?: boolean
 }) {
   const showExamples =
     examples &&
@@ -118,7 +233,10 @@ function PayloadPanel({
             Source JSON for this specimen.
           </p>
         </div>
-        <PayloadStatusBadge status={status} />
+        <PayloadStatusBadge
+          status={status}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
       </div>
       {showExamples && (
         <ExamplesTabs
@@ -188,12 +306,14 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     contract,
     onContractChange,
     contractDisabled,
+    contractDiagnostics,
     examples,
     activeExampleId,
     onSelectExample,
     onRenameExample,
     onAddExample,
     onDeleteExample,
+    hasUnsavedChanges,
   } = props
 
   const isCreate = mode === 'create'
@@ -246,12 +366,17 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               onRenameExample={onRenameExample}
               onAddExample={onAddExample}
               onDeleteExample={onDeleteExample}
+              hasUnsavedChanges={hasUnsavedChanges}
             />
           </TabsContent>
           <TabsContent value="formatted">
             <FormattedPanel value={value} />
           </TabsContent>
           <TabsContent value="contract">
+            <ContractDiagnosticsNotice
+              diagnostics={contractDiagnostics}
+              examples={examples}
+            />
             <ContractPanel
               contract={contract}
               disabled={contractDisabled}
@@ -276,15 +401,22 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               onRenameExample={onRenameExample}
               onAddExample={onAddExample}
               onDeleteExample={onDeleteExample}
+              hasUnsavedChanges={hasUnsavedChanges}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={44} minSize={32}>
-            <ContractPanel
-              contract={contract}
-              disabled={contractDisabled}
-              onChange={onContractChange}
-            />
+            <div className="flex flex-col gap-3">
+              <ContractDiagnosticsNotice
+                diagnostics={contractDiagnostics}
+                examples={examples}
+              />
+              <ContractPanel
+                contract={contract}
+                disabled={contractDisabled}
+                onChange={onContractChange}
+              />
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </section>
@@ -293,7 +425,13 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         onReset={onReset}
         disabled={submitDisabled}
         {...(mode === 'view'
-          ? { mode: 'view', documentUrl: props.documentUrl }
+          ? {
+            mode: 'view',
+            documentUrl: props.documentUrl,
+            apiUrl: props.apiUrl,
+            json: value,
+            hasUnsavedChanges,
+          }
           : { mode: 'create' })}
       />
     </>

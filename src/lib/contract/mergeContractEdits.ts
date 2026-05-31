@@ -8,8 +8,6 @@ function mergeFieldEdits(
 
   return {
     ...inferredField,
-    required: editedField.required,
-    nullable: editedField.nullable,
     enumValues: editedField.enumValues,
     description: editedField.description,
   }

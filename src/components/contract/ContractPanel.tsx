@@ -49,7 +49,7 @@ export function ContractPanel({
   }
 
   return (
-    <section className="animate-fade-in-up-delay-2 flex flex-col gap-3">
+    <section className="animate-fade-in-up-delay-2 flex min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
@@ -69,7 +69,7 @@ export function ContractPanel({
         </p>
       )}
 
-      <div className="overflow-hidden rounded-md border bg-card">
+      <div className="min-h-0 overflow-hidden rounded-md border bg-card">
         {disabled || fields.length === 0 ? (
           <Empty className="min-h-32 border-0 py-8">
             <EmptyHeader>
@@ -81,7 +81,7 @@ export function ContractPanel({
             </EmptyHeader>
           </Empty>
         ) : (
-          <ScrollArea className="max-h-[34rem]">
+          <ScrollArea className="h-[min(34rem,calc(100vh-14rem))] min-h-0">
             <Accordion type="multiple" className="w-full">
               {rows.map(({ field, depth, label, isContainer }) => (
                 <ContractFieldReferenceItem

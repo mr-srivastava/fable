@@ -4,11 +4,15 @@ import { useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { JsonContract } from '@/types/contract'
 import type { JsonDocumentExample } from '@/types/document'
+import type { ContractDiagnostics } from '@/lib/contract/inferContract'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useValidatedDocumentSubmit } from '@/hooks/use-validated-document-submit'
-import { inferContractFromExamples } from '@/lib/contract/inferContract'
+import { analyzeExamplesForContract } from '@/lib/contract/inferContract'
 import { mergeContractEdits } from '@/lib/contract/mergeContractEdits'
-import { createDocumentExample } from '@/lib/document-examples'
+import {
+  createDefaultDocumentExamples,
+  createDocumentExample,
+} from '@/lib/document-examples'
 import { parseJsonSafely } from '@/lib/json'
 
 export const Route = createFileRoute('/')({
@@ -16,12 +20,19 @@ export const Route = createFileRoute('/')({
 })
 
 function CreateDocument() {
-  const [examples, setExamples] = useState<Array<JsonDocumentExample>>(() => [
-    createDocumentExample(1, ''),
-  ])
+  const [examples, setExamples] = useState<Array<JsonDocumentExample>>(
+    createDefaultDocumentExamples,
+  )
   const [activeExampleId, setActiveExampleId] = useState(examples[0].id)
-  const [contract, setContract] = useState<JsonContract | undefined>()
-  const [contractDisabled, setContractDisabled] = useState(true)
+  const [contract, setContract] = useState<JsonContract | undefined>(() =>
+    analyzeExamplesForContract(examples).contract,
+  )
+  const [contractDiagnostics, setContractDiagnostics] = useState<
+    ContractDiagnostics | undefined
+  >(() =>
+    analyzeExamplesForContract(examples).diagnostics,
+  )
+  const [contractDisabled, setContractDisabled] = useState(false)
   const navigate = useNavigate()
   const createDocument = useMutation(api.documents.create)
 
@@ -40,11 +51,13 @@ function CreateDocument() {
 
       if (parsedExamples.some((result) => !result.ok)) {
         setContractDisabled(true)
+        setContractDiagnostics(undefined)
         return
       }
 
-      const inferred = inferContractFromExamples(nextExamples)
-      setContract((current) => mergeContractEdits(inferred, current))
+      const analysis = analyzeExamplesForContract(nextExamples)
+      setContract((current) => mergeContractEdits(analysis.contract, current))
+      setContractDiagnostics(analysis.diagnostics)
       setContractDisabled(false)
     },
     [],
@@ -142,12 +155,15 @@ function CreateDocument() {
           contract={contract}
           onContractChange={setContract}
           contractDisabled={contractDisabled}
+          contractDiagnostics={contractDiagnostics}
           onReset={() => {
-            const resetExample = createDocumentExample(1, '')
-            setExamples([resetExample])
-            setActiveExampleId(resetExample.id)
-            setContract(undefined)
-            setContractDisabled(true)
+            const resetExamples = createDefaultDocumentExamples()
+            const analysis = analyzeExamplesForContract(resetExamples)
+            setExamples(resetExamples)
+            setActiveExampleId(resetExamples[0].id)
+            setContract(analysis.contract)
+            setContractDiagnostics(analysis.diagnostics)
+            setContractDisabled(false)
           }}
         />
       </div>

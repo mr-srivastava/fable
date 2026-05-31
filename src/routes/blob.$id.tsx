@@ -1,13 +1,14 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
 import type { JsonContract } from '@/types/contract'
 import type { JsonDocumentExample } from '@/types/document'
+import type { ContractDiagnostics } from '@/lib/contract/inferContract'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useValidatedDocumentSubmit } from '@/hooks/use-validated-document-submit'
-import { inferContractFromExamples } from '@/lib/contract/inferContract'
+import { analyzeExamplesForContract } from '@/lib/contract/inferContract'
 import { mergeContractEdits } from '@/lib/contract/mergeContractEdits'
 import {
   createDocumentExample,
@@ -41,7 +42,29 @@ function getInitialContract(
     (example) => parseJsonSafely(example.data).ok,
   )
 
-  return allExamplesAreValid ? inferContractFromExamples(examples) : undefined
+  return allExamplesAreValid
+    ? analyzeExamplesForContract(examples).contract
+    : undefined
+}
+
+function getInitialContractDiagnostics(
+  document: Doc<'documents'>,
+): ContractDiagnostics | undefined {
+  const examples = normalizeDocumentExamples(document)
+  const allExamplesAreValid = examples.every(
+    (example) => parseJsonSafely(example.data).ok,
+  )
+
+  return allExamplesAreValid
+    ? analyzeExamplesForContract(examples).diagnostics
+    : undefined
+}
+
+function getDocumentSnapshot(
+  examples: Array<JsonDocumentExample>,
+  contract?: JsonContract,
+) {
+  return JSON.stringify({ examples, contract: contract ?? null })
 }
 
 function DocumentEditor({
@@ -61,8 +84,35 @@ function DocumentEditor({
   const [contract, setContract] = useState<JsonContract | undefined>(() =>
     getInitialContract(document),
   )
+  const [contractDiagnostics, setContractDiagnostics] = useState<
+    ContractDiagnostics | undefined
+  >(() => getInitialContractDiagnostics(document))
   const [contractDisabled, setContractDisabled] = useState(false)
   const updateDocument = useMutation(api.documents.update)
+
+  const savedSnapshot = useMemo(
+    () => getDocumentSnapshot(initialExamples, getInitialContract(document)),
+    [document, initialExamples],
+  )
+
+  const currentSnapshot = useMemo(
+    () => getDocumentSnapshot(examples, contract),
+    [contract, examples],
+  )
+
+  const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   const activeExample = useMemo(
     () =>
@@ -79,11 +129,13 @@ function DocumentEditor({
 
       if (!allExamplesAreValid) {
         setContractDisabled(true)
+        setContractDiagnostics(undefined)
         return
       }
 
-      const inferred = inferContractFromExamples(nextExamples)
-      setContract((current) => mergeContractEdits(inferred, current))
+      const analysis = analyzeExamplesForContract(nextExamples)
+      setContract((current) => mergeContractEdits(analysis.contract, current))
+      setContractDiagnostics(analysis.diagnostics)
       setContractDisabled(false)
     },
     [],
@@ -169,6 +221,10 @@ function DocumentEditor({
     typeof window !== 'undefined'
       ? `${window.location.origin}/blob/${id}`
       : `/blob/${id}`
+  const apiUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/api/blob/${id}`
+      : `/api/blob/${id}`
 
   const updatedAtMs = document.updatedAt ?? document._creationTime
   const updatedAtFormatted = updatedAtMs
@@ -196,13 +252,17 @@ function DocumentEditor({
           title="Saved specimen"
           description={`Last updated ${updatedAtFormatted}`}
           documentUrl={documentUrl}
+          apiUrl={apiUrl}
+          hasUnsavedChanges={hasUnsavedChanges}
           contract={contract}
           onContractChange={setContract}
           contractDisabled={contractDisabled}
+          contractDiagnostics={contractDiagnostics}
           onReset={() => {
             setExamples(initialExamples)
             setActiveExampleId(initialExamples[0].id)
             setContract(getInitialContract(document))
+            setContractDiagnostics(getInitialContractDiagnostics(document))
             setContractDisabled(false)
           }}
         />

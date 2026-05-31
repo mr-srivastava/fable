@@ -1,5 +1,6 @@
 import type { JsonContract } from '@/types/contract'
 import type { JsonDocumentExample } from '@/types/document'
+import type { ContractDiagnostics } from '@/lib/contract/inferContract'
 
 export interface JsonEditorPanelFields {
   value: string
@@ -18,6 +19,8 @@ export interface JsonEditorPanelFields {
   contract?: JsonContract
   onContractChange: (contract: JsonContract) => void
   contractDisabled?: boolean
+  contractDiagnostics?: ContractDiagnostics
+  hasUnsavedChanges?: boolean
 }
 
 export type JsonEditorPanelHeaderProps = Pick<
@@ -34,7 +37,13 @@ export type DocumentEditorActionsProps = Pick<
   disabled: boolean
 } & (
   | { mode: 'create' }
-  | { mode: 'view'; documentUrl: string }
+  | {
+      mode: 'view'
+      documentUrl: string
+      apiUrl: string
+      json: string
+      hasUnsavedChanges?: boolean
+    }
 )
 
 export type JsonEditorGridProps = Pick<
@@ -58,6 +67,8 @@ type BaseProps = Pick<
   | 'contract'
   | 'onContractChange'
   | 'contractDisabled'
+  | 'contractDiagnostics'
+  | 'hasUnsavedChanges'
 >
 
 export type JsonEditorPanelProps =
@@ -71,4 +82,6 @@ export type JsonEditorPanelProps =
       title?: string
       description?: string
       documentUrl: string
+      apiUrl: string
+      hasUnsavedChanges?: boolean
     })
