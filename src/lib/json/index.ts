@@ -1,3 +1,5 @@
+import parseJson from 'json-parse-even-better-errors'
+
 export const MAX_JSON_SIZE = 102400 // 100KB in bytes
 
 export type ParseJsonResult =
@@ -26,9 +28,26 @@ export function validateJsonSize(
   return { valid: true, size }
 }
 
+function removeJsonMetadata(value: unknown): unknown {
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  delete (value as Record<symbol, unknown>)[Symbol.for('indent')]
+  delete (value as Record<symbol, unknown>)[Symbol.for('newline')]
+
+  if (Array.isArray(value)) {
+    value.forEach(removeJsonMetadata)
+    return value
+  }
+
+  Object.values(value).forEach(removeJsonMetadata)
+  return value
+}
+
 export function parseJsonSafely(input: string): ParseJsonResult {
   try {
-    const value = JSON.parse(input)
+    const value = removeJsonMetadata(parseJson(input))
     const sizeValidation = validateJsonSize(input)
     if (!sizeValidation.valid) {
       return {

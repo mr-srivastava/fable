@@ -1,9 +1,9 @@
 import type {
   JsonContract,
   JsonContractField,
+  JsonDocumentExample,
   JsonFieldType,
-} from '@/types/contract'
-import type { JsonDocumentExample } from '@/types/document'
+} from '@/lib/schemas'
 
 type FieldAccumulator = {
   path: string

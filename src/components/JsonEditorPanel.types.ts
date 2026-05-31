@@ -1,5 +1,4 @@
-import type { JsonContract } from '@/types/contract'
-import type { JsonDocumentExample } from '@/types/document'
+import type { JsonContract, JsonDocumentExample } from '@/lib/schemas'
 import type { ContractDiagnostics } from '@/lib/contract/inferContract'
 
 export interface JsonEditorPanelFields {

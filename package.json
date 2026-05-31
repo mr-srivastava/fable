@@ -10,6 +10,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck",
     "preflight": "pnpm run check && pnpm run build"
@@ -36,6 +37,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.27.3",
+    "json-parse-even-better-errors": "^6.0.0",
     "lucide-react": "^0.561.0",
     "nitro": "npm:nitro-nightly@latest",
     "radix-ui": "^1.4.3",
@@ -45,6 +47,7 @@
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.6",
     "tw-animate-css": "^1.3.6",
+    "valibot": "^1.4.1",
     "vite-tsconfig-paths": "^6.0.2"
   },
   "devDependencies": {
@@ -58,6 +61,7 @@
     "prettier": "^3.5.3",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
+    "vitest": "^4.1.7",
     "web-vitals": "^5.1.0"
   }
 }

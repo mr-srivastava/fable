@@ -1,4 +1,8 @@
 import { v } from 'convex/values'
+import {
+  assertValidDocumentContract,
+  assertValidDocumentExamples as assertValidDocumentExamplesSchema,
+} from '../src/lib/schemas'
 import { mutation, query } from './_generated/server'
 
 const MAX_DOCUMENT_SIZE = 102400 // 100KB
@@ -64,9 +68,7 @@ function assertValidDocumentExamples(
     updatedAt?: number
   }>,
 ) {
-  if (examples.length === 0) {
-    throw new Error('At least one example is required')
-  }
+  assertValidDocumentExamplesSchema(examples)
 
   for (const example of examples) {
     assertValidDocumentData(example.data)
@@ -86,6 +88,9 @@ export const create = mutation({
 
     if (args.examples) {
       assertValidDocumentExamples(args.examples)
+    }
+    if (args.contract) {
+      assertValidDocumentContract(args.contract)
     }
 
     return await ctx.db.insert('documents', {
@@ -121,6 +126,9 @@ export const update = mutation({
 
     if (args.examples) {
       assertValidDocumentExamples(args.examples)
+    }
+    if (args.contract) {
+      assertValidDocumentContract(args.contract)
     }
 
     await ctx.db.patch(args.id, {

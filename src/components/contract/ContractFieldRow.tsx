@@ -1,5 +1,5 @@
 import { EnumValuesInput } from './EnumValuesInput'
-import type { JsonContractField } from '@/types/contract'
+import type { JsonContractField } from '@/lib/schemas'
 import {
   AccordionContent,
   AccordionItem,

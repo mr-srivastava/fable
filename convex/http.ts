@@ -1,10 +1,9 @@
 import { httpRouter } from 'convex/server'
+import { parseDocumentId } from '../src/lib/schemas'
 import { httpAction } from './_generated/server'
 import { api } from './_generated/api'
-import type { Id } from './_generated/dataModel'
 
 const http = httpRouter()
-const DOCUMENT_ID_PATTERN = /^[a-z0-9_]+$/i
 
 function getJsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -14,13 +13,6 @@ function getJsonResponse(body: unknown, init?: ResponseInit) {
       ...init?.headers,
     },
   })
-}
-
-function parseDocumentId(raw: string): Id<'documents'> | null {
-  if (raw.length < 10 || raw.length > 64 || !DOCUMENT_ID_PATTERN.test(raw)) {
-    return null
-  }
-  return raw as Id<'documents'>
 }
 
 http.route({

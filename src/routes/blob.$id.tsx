@@ -3,8 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
-import type { JsonContract } from '@/types/contract'
-import type { JsonDocumentExample } from '@/types/document'
+import type { JsonContract, JsonDocumentExample } from '@/lib/schemas'
 import type { ContractDiagnostics } from '@/lib/contract/inferContract'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useValidatedDocumentSubmit } from '@/hooks/use-validated-document-submit'
@@ -14,7 +13,7 @@ import {
   createDocumentExample,
   normalizeDocumentExamples,
 } from '@/lib/document-examples'
-import { parseDocumentId } from '@/lib/document-id'
+import { parseDocumentId } from '@/lib/schemas'
 import { parseJsonSafely } from '@/lib/json'
 
 export const Route = createFileRoute('/blob/$id')({

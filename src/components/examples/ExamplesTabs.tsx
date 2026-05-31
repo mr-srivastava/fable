@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
-import type { JsonDocumentExample } from '@/types/document'
+import type { JsonDocumentExample } from '@/lib/schemas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'

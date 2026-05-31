@@ -1,4 +1,4 @@
-import type { JsonContract, JsonContractField } from '@/types/contract'
+import type { JsonContract, JsonContractField } from '@/lib/schemas'
 
 function mergeFieldEdits(
   inferredField: JsonContractField,

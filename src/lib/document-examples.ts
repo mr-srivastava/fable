@@ -1,4 +1,4 @@
-import type { JsonDocumentExample } from '@/types/document'
+import type { JsonDocumentExample } from '@/lib/schemas'
 
 const DEFAULT_EXAMPLE_ID = 'default'
 const DEFAULT_EXAMPLE_NAME = 'Example'
