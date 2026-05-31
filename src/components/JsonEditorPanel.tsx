@@ -9,11 +9,7 @@ import { ContractPanel } from '@/components/contract/ContractPanel'
 import { ExamplesTabs } from '@/components/examples/ExamplesTabs'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
 import { JsonEditor } from '@/components/JsonEditor'
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -93,14 +89,14 @@ function PayloadStatusBadge({
         className={cn(
           'gap-1.5 border-success/40 bg-success/10 text-success',
           hasUnsavedChanges &&
-          'border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300',
+            'border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300',
         )}
       >
         <span
           className={cn(
             'size-2 rounded-full bg-success',
             hasUnsavedChanges &&
-            'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgb(251_191_36_/_0.18)]',
+              'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgb(251_191_36_/_0.18)]',
           )}
           aria-hidden="true"
         />
@@ -124,7 +120,7 @@ function PayloadStatusBadge({
 }
 
 function ContractDiagnosticsNotice({
-  diagnostics,
+  contractDiagnostics,
   examples,
 }: Pick<JsonEditorPanelProps, 'contractDiagnostics' | 'examples'>) {
   const [dismissed, setDismissed] = useState(false)
@@ -132,8 +128,8 @@ function ContractDiagnosticsNotice({
 
   if (
     dismissed ||
-    !diagnostics ||
-    diagnostics.severity !== 'warning' ||
+    !contractDiagnostics ||
+    contractDiagnostics.severity !== 'warning' ||
     !examples
   ) {
     return null
@@ -176,7 +172,7 @@ function ContractDiagnosticsNotice({
               Suggested groups
             </p>
             <ul className="space-y-1 text-sm">
-              {diagnostics.divergentGroups.map((group, index) => (
+              {contractDiagnostics.divergentGroups.map((group, index) => (
                 <li key={group.id}>
                   <span className="font-medium">Group {index + 1}:</span>{' '}
                   {group.exampleIds
@@ -374,7 +370,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           </TabsContent>
           <TabsContent value="contract">
             <ContractDiagnosticsNotice
-              diagnostics={contractDiagnostics}
+              contractDiagnostics={contractDiagnostics}
               examples={examples}
             />
             <ContractPanel
@@ -408,7 +404,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           <ResizablePanel defaultSize={44} minSize={32}>
             <div className="flex flex-col gap-3">
               <ContractDiagnosticsNotice
-                diagnostics={contractDiagnostics}
+                contractDiagnostics={contractDiagnostics}
                 examples={examples}
               />
               <ContractPanel
@@ -426,12 +422,12 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         disabled={submitDisabled}
         {...(mode === 'view'
           ? {
-            mode: 'view',
-            documentUrl: props.documentUrl,
-            apiUrl: props.apiUrl,
-            json: value,
-            hasUnsavedChanges,
-          }
+              mode: 'view',
+              documentUrl: props.documentUrl,
+              apiUrl: props.apiUrl,
+              json: value,
+              hasUnsavedChanges,
+            }
           : { mode: 'create' })}
       />
     </>

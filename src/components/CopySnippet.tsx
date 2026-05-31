@@ -13,7 +13,11 @@ const SNIPPET_LABELS: Record<SnippetType, string> = {
   fetch: 'fetch',
 }
 
-function getSnippet(type: SnippetType, pageUrl: string, apiUrl: string): string {
+function getSnippet(
+  type: SnippetType,
+  pageUrl: string,
+  apiUrl: string,
+): string {
   switch (type) {
     case 'url':
       return pageUrl

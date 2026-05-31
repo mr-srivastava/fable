@@ -24,22 +24,19 @@ function CreateDocument() {
     createDefaultDocumentExamples,
   )
   const [activeExampleId, setActiveExampleId] = useState(examples[0].id)
-  const [contract, setContract] = useState<JsonContract | undefined>(() =>
-    analyzeExamplesForContract(examples).contract,
+  const [contract, setContract] = useState<JsonContract | undefined>(
+    () => analyzeExamplesForContract(examples).contract,
   )
   const [contractDiagnostics, setContractDiagnostics] = useState<
     ContractDiagnostics | undefined
-  >(() =>
-    analyzeExamplesForContract(examples).diagnostics,
-  )
+  >(() => analyzeExamplesForContract(examples).diagnostics)
   const [contractDisabled, setContractDisabled] = useState(false)
   const navigate = useNavigate()
   const createDocument = useMutation(api.documents.create)
 
   const activeExample = useMemo(
     () =>
-      examples.find((example) => example.id === activeExampleId) ??
-      examples[0],
+      examples.find((example) => example.id === activeExampleId) ?? examples[0],
     [activeExampleId, examples],
   )
 
@@ -78,18 +75,15 @@ function CreateDocument() {
     [activeExampleId, examples, updateContractFromExamples],
   )
 
-  const handleRenameExample = useCallback(
-    (id: string, name: string) => {
-      setExamples((current) =>
-        current.map((example) =>
-          example.id === id
-            ? { ...example, name, updatedAt: Date.now() }
-            : example,
-        ),
-      )
-    },
-    [],
-  )
+  const handleRenameExample = useCallback((id: string, name: string) => {
+    setExamples((current) =>
+      current.map((example) =>
+        example.id === id
+          ? { ...example, name, updatedAt: Date.now() }
+          : example,
+      ),
+    )
+  }, [])
 
   const handleAddExample = useCallback(() => {
     const nextExample = createDocumentExample(examples.length + 1)

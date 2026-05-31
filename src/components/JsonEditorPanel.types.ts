@@ -36,15 +36,15 @@ export type DocumentEditorActionsProps = Pick<
 > & {
   disabled: boolean
 } & (
-  | { mode: 'create' }
-  | {
-      mode: 'view'
-      documentUrl: string
-      apiUrl: string
-      json: string
-      hasUnsavedChanges?: boolean
-    }
-)
+    | { mode: 'create' }
+    | {
+        mode: 'view'
+        documentUrl: string
+        apiUrl: string
+        json: string
+        hasUnsavedChanges?: boolean
+      }
+  )
 
 export type JsonEditorGridProps = Pick<
   JsonEditorPanelFields,

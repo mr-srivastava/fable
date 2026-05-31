@@ -9,8 +9,8 @@
 To run this application:
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 # Building For Production
@@ -18,7 +18,7 @@ npm run dev
 To build this application for production:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Styling
@@ -27,12 +27,20 @@ This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 
 ## Linting & Formatting
 
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
+This project uses [ESLint](https://eslint.org/) and
+[Prettier](https://prettier.io/) for linting and formatting. ESLint is
+configured using
+[tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The
+following scripts are available:
 
 ```bash
-npm run lint
-npm run format
-npm run check
+pnpm run lint
+pnpm run lint:fix
+pnpm run format
+pnpm run format:check
+pnpm run typecheck
+pnpm run check
+pnpm run preflight
 ```
 
 ## Setting up Convex

@@ -228,7 +228,12 @@ function walkExampleArray(
     for (const key of keys) {
       for (const item of objectItems) {
         if (Object.prototype.hasOwnProperty.call(item, key)) {
-          walkExampleValue(item[key], `${itemPath}.${key}`, fields, exampleIndex)
+          walkExampleValue(
+            item[key],
+            `${itemPath}.${key}`,
+            fields,
+            exampleIndex,
+          )
         }
       }
     }
@@ -259,7 +264,13 @@ function collectShape(
 
   if (Array.isArray(value)) {
     for (const item of value) {
-      collectShape(item, path ? `${path}[]` : '[]', paths, topLevelFields, discriminatorFields)
+      collectShape(
+        item,
+        path ? `${path}[]` : '[]',
+        paths,
+        topLevelFields,
+        discriminatorFields,
+      )
     }
     return
   }
@@ -310,7 +321,10 @@ function getOverlap(left: Set<string>, right: Set<string>) {
   return intersection.length / union.size
 }
 
-function getSharedFields(shapes: Array<ExampleShape>, field: keyof ExampleShape) {
+function getSharedFields(
+  shapes: Array<ExampleShape>,
+  field: keyof ExampleShape,
+) {
   if (shapes.length === 0) return []
 
   const first = shapes[0][field]
@@ -378,7 +392,9 @@ function getDivergentGroups(shapes: Array<ExampleShape>) {
 function getOptionalFieldRatio(contract: JsonContract) {
   if (contract.fields.length === 0) return 0
 
-  const optionalCount = contract.fields.filter((field) => !field.required).length
+  const optionalCount = contract.fields.filter(
+    (field) => !field.required,
+  ).length
   return optionalCount / contract.fields.length
 }
 
@@ -391,7 +407,10 @@ function getContractDiagnostics(
   const sharedEnvelopeFields = sharedTopLevelFields.filter((field) =>
     ENVELOPE_FIELDS.has(field),
   )
-  const sharedDiscriminatorFields = getSharedFields(shapes, 'discriminatorFields')
+  const sharedDiscriminatorFields = getSharedFields(
+    shapes,
+    'discriminatorFields',
+  )
   const similarityScore = getAveragePairwiseOverlap(shapes, 'paths')
   const topLevelSimilarityScore = getAveragePairwiseOverlap(
     shapes,

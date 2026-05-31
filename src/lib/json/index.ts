@@ -11,7 +11,9 @@ export function getJsonSize(input: string): number {
 export function validateJsonSize(
   input: string,
   maxBytes = MAX_JSON_SIZE,
-): { valid: true; size: number } | { valid: false; error: string; size: number } {
+):
+  | { valid: true; size: number }
+  | { valid: false; error: string; size: number } {
   const size = getJsonSize(input)
   if (size > maxBytes) {
     return {

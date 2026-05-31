@@ -39,12 +39,15 @@ http.route({
     try {
       const blobId = await ctx.runMutation(api.documents.create, { data })
       const siteUrl =
-        process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? 'http://localhost:3000'
+        process.env.SITE_URL ??
+        process.env.CONVEX_SITE_URL ??
+        'http://localhost:3000'
       const url = `${siteUrl}/blob/${blobId}`
 
       return getJsonResponse({ id: blobId, url }, { status: 201 })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create blob'
+      const message =
+        err instanceof Error ? err.message : 'Failed to create blob'
       return getJsonResponse({ error: message }, { status: 400 })
     }
   }),

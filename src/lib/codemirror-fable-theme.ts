@@ -52,7 +52,7 @@ function buildTheme(isDark: boolean): Extension {
         backgroundColor: `${primary}22`,
       },
     },
-    { dark: isDark }
+    { dark: isDark },
   )
 }
 

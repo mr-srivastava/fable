@@ -116,8 +116,7 @@ function DocumentEditor({
 
   const activeExample = useMemo(
     () =>
-      examples.find((example) => example.id === activeExampleId) ??
-      examples[0],
+      examples.find((example) => example.id === activeExampleId) ?? examples[0],
     [activeExampleId, examples],
   )
 
@@ -190,26 +189,23 @@ function DocumentEditor({
     [activeExampleId, examples, updateContractFromExamples],
   )
 
-  const submitDocument = useCallback(
-    async () => {
-      if (examples.length === 0) {
-        throw new Error('At least one example is required')
-      }
+  const submitDocument = useCallback(async () => {
+    if (examples.length === 0) {
+      throw new Error('At least one example is required')
+    }
 
-      if (examples.some((example) => !parseJsonSafely(example.data).ok)) {
-        throw new Error('All examples must contain valid JSON')
-      }
+    if (examples.some((example) => !parseJsonSafely(example.data).ok)) {
+      throw new Error('All examples must contain valid JSON')
+    }
 
-      const firstExample = examples[0]
-      await updateDocument({
-        id,
-        data: firstExample.data,
-        examples,
-        contract,
-      })
-    },
-    [contract, examples, id, updateDocument],
-  )
+    const firstExample = examples[0]
+    await updateDocument({
+      id,
+      data: firstExample.data,
+      examples,
+      contract,
+    })
+  }, [contract, examples, id, updateDocument])
 
   const { error, handleSubmit } = useValidatedDocumentSubmit(
     () => activeExample.data,
