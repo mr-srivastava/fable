@@ -44,7 +44,11 @@ export function CopyButton({
       size={size}
       onClick={handleCopy}
       aria-label={ariaLabel ?? `Copy ${label}`}
-      className={cn('gap-2', copyError && 'border-destructive text-destructive', className)}
+      className={cn(
+        'gap-2',
+        copyError && 'border-destructive text-destructive',
+        className,
+      )}
     >
       {copied ? (
         <Check className="h-4 w-4 text-success" />

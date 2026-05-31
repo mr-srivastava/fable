@@ -5,16 +5,16 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react'
+import type { ReactNode } from 'react'
+import type { Theme } from '@/hooks/use-theme'
 import { invalidateFableCodeMirrorThemeCache } from '@/lib/codemirror-fable-theme'
 import {
+  STORAGE_KEY,
   applyTheme,
   getResolvedTheme,
   getStoredTheme,
   getSystemTheme,
-  STORAGE_KEY,
-  type Theme,
 } from '@/hooks/use-theme'
 
 type ThemeContextValue = {
@@ -29,7 +29,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 function ThemeContextProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => getStoredTheme())
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    getResolvedTheme(getStoredTheme())
+    getResolvedTheme(getStoredTheme()),
   )
 
   const setTheme = useCallback((next: Theme) => {
@@ -63,12 +63,10 @@ function ThemeContextProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ theme, resolvedTheme, setTheme, toggleTheme }),
-    [theme, resolvedTheme, setTheme, toggleTheme]
+    [theme, resolvedTheme, setTheme, toggleTheme],
   )
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  )
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

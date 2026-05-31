@@ -8,7 +8,7 @@
  * @module
  */
 
-import type * as blobs from "../blobs.js";
+import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 
 import type {
@@ -18,7 +18,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  blobs: typeof blobs;
+  documents: typeof documents;
   http: typeof http;
 }>;
 

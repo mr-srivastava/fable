@@ -1,15 +1,25 @@
-// ---------------------------------------------------------------------------
-// Types: single superset, then Pick-derived interfaces
-// ---------------------------------------------------------------------------
+import type { JsonContract, JsonDocumentExample } from '@/lib/schemas'
+import type { ContractDiagnostics } from '@/lib/contract/inferContract'
 
 export interface JsonEditorPanelFields {
   value: string
   onChange: (value: string) => void
+  examples?: Array<JsonDocumentExample>
+  activeExampleId?: string
+  onSelectExample?: (id: string) => void
+  onRenameExample?: (id: string, name: string) => void
+  onAddExample?: () => void
+  onDeleteExample?: (id: string) => void
   error?: string
   onSubmit: () => Promise<void>
   title?: string
   description?: string
   onReset: () => void
+  contract?: JsonContract
+  onContractChange: (contract: JsonContract) => void
+  contractDisabled?: boolean
+  contractDiagnostics?: ContractDiagnostics
+  hasUnsavedChanges?: boolean
 }
 
 export type JsonEditorPanelHeaderProps = Pick<
@@ -19,15 +29,21 @@ export type JsonEditorPanelHeaderProps = Pick<
   mode: 'create' | 'view'
 }
 
-export type BlobEditorActionsProps = Pick<
+export type DocumentEditorActionsProps = Pick<
   JsonEditorPanelFields,
   'onSubmit' | 'onReset'
 > & {
   disabled: boolean
 } & (
-  | { mode: 'create' }
-  | { mode: 'view'; blobUrl: string }
-)
+    | { mode: 'create' }
+    | {
+        mode: 'view'
+        documentUrl: string
+        apiUrl: string
+        json: string
+        hasUnsavedChanges?: boolean
+      }
+  )
 
 export type JsonEditorGridProps = Pick<
   JsonEditorPanelFields,
@@ -36,7 +52,22 @@ export type JsonEditorGridProps = Pick<
 
 type BaseProps = Pick<
   JsonEditorPanelFields,
-  'value' | 'onChange' | 'error' | 'onSubmit' | 'onReset'
+  | 'value'
+  | 'onChange'
+  | 'examples'
+  | 'activeExampleId'
+  | 'onSelectExample'
+  | 'onRenameExample'
+  | 'onAddExample'
+  | 'onDeleteExample'
+  | 'error'
+  | 'onSubmit'
+  | 'onReset'
+  | 'contract'
+  | 'onContractChange'
+  | 'contractDisabled'
+  | 'contractDiagnostics'
+  | 'hasUnsavedChanges'
 >
 
 export type JsonEditorPanelProps =
@@ -49,5 +80,7 @@ export type JsonEditorPanelProps =
       mode: 'view'
       title?: string
       description?: string
-      blobUrl: string
+      documentUrl: string
+      apiUrl: string
+      hasUnsavedChanges?: boolean
     })

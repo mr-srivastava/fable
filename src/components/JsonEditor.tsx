@@ -2,13 +2,7 @@ import { useCallback, useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json, jsonParseLinter } from '@codemirror/lang-json'
 import { linter } from '@codemirror/lint'
-import {
-  AlertCircle,
-  AlertTriangle,
-  Check,
-  FileText,
-  X,
-} from 'lucide-react'
+import { AlertCircle, AlertTriangle, Check, FileText, X } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
 import { getFableCodeMirrorTheme } from '@/lib/codemirror-fable-theme'
 import { MAX_BLOB_SIZE, formatBytes, parseJSONInput } from '@/lib/validators'
@@ -29,21 +23,15 @@ export function JsonEditor({
   mode,
   onChange,
   error,
-  height = '580px',
+  height = 'clamp(22rem, 54vh, 34rem)',
   placeholder = '{"key": "value"}',
   className,
 }: JsonEditorProps) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const editorTheme = useMemo(
-    () => getFableCodeMirrorTheme(isDark),
-    [isDark]
-  )
+  const editorTheme = useMemo(() => getFableCodeMirrorTheme(isDark), [isDark])
 
-  const extensions = useMemo(
-    () => [json(), linter(jsonParseLinter())],
-    []
-  )
+  const extensions = useMemo(() => [json(), linter(jsonParseLinter())], [])
 
   const { validation, formatted, parseError } = useMemo(() => {
     const isEmpty = value.trim() === ''
@@ -79,7 +67,7 @@ export function JsonEditor({
     (newValue: string) => {
       onChange?.(newValue)
     },
-    [onChange]
+    [onChange],
   )
 
   const sizePercentage = useMemo(() => {
@@ -92,9 +80,9 @@ export function JsonEditor({
       <div className={cn('space-y-2', className)}>
         <div
           className={cn(
-            'rounded-md border border-border bg-card overflow-hidden transition-colors',
+            'overflow-hidden rounded-md border border-border bg-card transition-colors',
             'ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-            !validation.valid && value.length > 0 && 'border-destructive/50'
+            !validation.valid && value.length > 0 && 'border-destructive/50',
           )}
         >
           <CodeMirror
@@ -121,7 +109,7 @@ export function JsonEditor({
               <p className="text-sm text-muted-foreground">
                 {formatBytes(validation.size)} / {formatBytes(MAX_BLOB_SIZE)}
               </p>
-              <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
                     'h-full transition-all duration-300',
@@ -129,7 +117,7 @@ export function JsonEditor({
                       ? 'bg-success'
                       : sizePercentage < 90
                         ? 'bg-warning'
-                        : 'bg-destructive'
+                        : 'bg-destructive',
                   )}
                   style={{ width: `${sizePercentage}%` }}
                 />
@@ -137,15 +125,15 @@ export function JsonEditor({
             </div>
 
             {validation.valid ? (
-              <span className="text-xs text-success flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" />
+              <span className="flex items-center gap-1 text-xs text-success">
+                <Check className="h-3.5 w-3.5" />
                 Valid JSON
               </span>
             ) : (
               'error' in validation &&
               validation.error && (
-                <span className="text-xs text-destructive flex items-center gap-1">
-                  <X className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-1 text-xs text-destructive">
+                  <X className="h-3.5 w-3.5" />
                   {validation.error}
                 </span>
               )
@@ -154,8 +142,8 @@ export function JsonEditor({
         )}
 
         {error && (
-          <p className="text-sm text-destructive flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <p className="flex items-center gap-1.5 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </p>
         )}
@@ -168,13 +156,13 @@ export function JsonEditor({
     return (
       <div
         className={cn(
-          'rounded-md border bg-muted/50 flex items-center justify-center p-6',
-          className
+          'flex items-center justify-center rounded-md border bg-muted/50 p-6',
+          className,
         )}
         style={{ height }}
       >
-        <div className="text-center space-y-2">
-          <FileText className="w-12 h-12 mx-auto text-muted-foreground/50" />
+        <div className="space-y-2 text-center">
+          <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">
             JSON input is empty. Adding JSON will show preview here.
           </p>
@@ -187,18 +175,18 @@ export function JsonEditor({
     return (
       <div
         className={cn(
-          'rounded-md border border-destructive/50 bg-destructive/5 flex items-center justify-center p-6',
-          className
+          'flex items-center justify-center rounded-md border border-destructive/50 bg-destructive/5 p-6',
+          className,
         )}
         style={{ height }}
       >
-        <div className="text-center space-y-3 max-w-md">
-          <AlertTriangle className="w-12 h-12 mx-auto text-destructive" />
+        <div className="max-w-md space-y-3 text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
           <div>
-            <p className="text-sm font-medium text-destructive mb-1">
+            <p className="mb-1 text-sm font-medium text-destructive">
               Invalid JSON
             </p>
-            <pre className="font-mono text-xs text-destructive/80 whitespace-pre-wrap wrap-break-word">
+            <pre className="wrap-break-word whitespace-pre-wrap font-mono text-xs text-destructive/80">
               {parseError}
             </pre>
           </div>
@@ -208,7 +196,12 @@ export function JsonEditor({
   }
 
   return (
-    <div className={cn('rounded-md border border-border bg-card overflow-hidden', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-md border border-border bg-card',
+        className,
+      )}
+    >
       <CodeMirror
         value={formatted}
         height={height}

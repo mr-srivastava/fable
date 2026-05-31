@@ -1,7 +1,8 @@
 import { CopyButton } from '@/components/CopyButton'
 
 interface CopySnippetProps {
-  url: string
+  pageUrl: string
+  apiUrl: string
 }
 
 type SnippetType = 'url' | 'curl' | 'fetch'
@@ -12,28 +13,32 @@ const SNIPPET_LABELS: Record<SnippetType, string> = {
   fetch: 'fetch',
 }
 
-function getSnippet(type: SnippetType, url: string): string {
+function getSnippet(
+  type: SnippetType,
+  pageUrl: string,
+  apiUrl: string,
+): string {
   switch (type) {
     case 'url':
-      return url
+      return pageUrl
     case 'curl':
-      return `curl -X GET "${url}"`
+      return `curl -X GET "${apiUrl}"`
     case 'fetch':
-      return `fetch("${url}")
+      return `fetch("${apiUrl}")
   .then(res => res.json())
   .then(data => console.log(data))`
     default:
-      return url
+      return pageUrl
   }
 }
 
-export function CopySnippet({ url }: CopySnippetProps) {
+export function CopySnippet({ pageUrl, apiUrl }: CopySnippetProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {(['url', 'curl', 'fetch'] as const).map((type) => (
         <CopyButton
           key={type}
-          text={getSnippet(type, url)}
+          text={getSnippet(type, pageUrl, apiUrl)}
           label={SNIPPET_LABELS[type]}
         />
       ))}
