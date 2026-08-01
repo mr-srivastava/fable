@@ -17,8 +17,6 @@ import type { SchemaValidationDiagnostic } from '@shared/json-schema'
 import { analyzeExamplesForContract } from '@/lib/contract/inferContract'
 import { parseJsonSafely } from '@/lib/json'
 
-export type ContractInferenceStatus = 'pending' | 'ready' | 'error'
-
 export type DocumentDraft = {
   examples: Array<JsonDocumentExample>
   activeExampleId: string
@@ -27,10 +25,7 @@ export type DocumentDraft = {
   jsonSchema?: JsonSchema
   contractOverrides: ContractOverrides
   schemaDiagnostics: Array<SchemaValidationDiagnostic>
-  inferenceStatus: ContractInferenceStatus
-  inferenceError?: string
   diagnostics?: ContractDiagnostics
-  contractDisabled: boolean
 }
 
 export type DocumentWriteInput = {
@@ -39,6 +34,12 @@ export type DocumentWriteInput = {
   jsonSchema?: JsonSchema
   contractOverrides?: ContractOverrides
 }
+
+export type ContractOverrideChange =
+  | { pointer: string; type: 'requiredChanged'; required: boolean }
+  | { pointer: string; type: 'nullableChanged'; nullable: boolean }
+  | { pointer: string; type: 'enumChanged'; enumValues?: Array<string> }
+  | { pointer: string; type: 'descriptionChanged'; description?: string }
 
 function examplesAreValid(examples: Array<JsonDocumentExample>) {
   return examples.every((example) => parseJsonSafely(example.data).ok)
@@ -86,9 +87,6 @@ function buildSchemaState(
     contract,
     contractOverrides: applied.overrides,
     schemaDiagnostics,
-    inferenceStatus: 'ready' as const,
-    inferenceError: undefined,
-    contractDisabled: false,
   }
 }
 
@@ -111,7 +109,6 @@ export function createDocumentDraft(
       examples,
       activeExampleId: examples[0].id,
       ...schemaState,
-      inferenceStatus: 'pending',
       diagnostics: getCompatibilityDiagnostics(examples),
     }
   }
@@ -122,10 +119,7 @@ export function createDocumentDraft(
     contract: persistedContract,
     contractOverrides: persistedOverrides,
     schemaDiagnostics: [],
-    inferenceStatus: valid ? 'pending' : 'error',
-    inferenceError: valid ? undefined : 'All examples must contain valid JSON',
     diagnostics: getCompatibilityDiagnostics(examples),
-    contractDisabled: !valid,
   }
 }
 
@@ -144,13 +138,6 @@ export function applyDraftInference(
     ...buildSchemaState(draft.examples, inferredJsonSchema, overrides),
     diagnostics: getCompatibilityDiagnostics(draft.examples),
   }
-}
-
-export function failDraftInference(
-  draft: DocumentDraft,
-  error: string,
-): DocumentDraft {
-  return { ...draft, inferenceStatus: 'error', inferenceError: error }
 }
 
 export function getActiveExample(draft: DocumentDraft): JsonDocumentExample {
@@ -173,15 +160,11 @@ function withChangedExamples(
   draft: DocumentDraft,
   examples: Array<JsonDocumentExample>,
 ) {
-  const valid = examplesAreValid(examples)
   return {
     ...draft,
     examples,
     schemaDiagnostics: [],
-    inferenceStatus: valid ? ('pending' as const) : ('error' as const),
-    inferenceError: valid ? undefined : 'All examples must contain valid JSON',
     diagnostics: getCompatibilityDiagnostics(examples),
-    contractDisabled: !valid,
   }
 }
 
@@ -238,7 +221,7 @@ export function removeDraftExample(
   }
 }
 
-export function updateDraftContract(
+function applyDraftContractProjection(
   draft: DocumentDraft,
   contract: JsonContract,
 ): DocumentDraft {
@@ -307,19 +290,43 @@ export function updateDraftContract(
     else overridesByPointer.delete(pointer)
   }
 
-  try {
-    return {
-      ...draft,
-      ...buildSchemaState(draft.examples, draft.inferredJsonSchema, [
-        ...overridesByPointer.values(),
-      ]),
-    }
-  } catch (error) {
-    return failDraftInference(
-      draft,
-      error instanceof Error ? error.message : 'Invalid contract',
-    )
+  return {
+    ...draft,
+    ...buildSchemaState(draft.examples, draft.inferredJsonSchema, [
+      ...overridesByPointer.values(),
+    ]),
   }
+}
+
+export function updateDraftContractOverride(
+  draft: DocumentDraft,
+  change: ContractOverrideChange,
+): DocumentDraft {
+  if (!draft.contract) return draft
+  const field = draft.contract.fields.find(
+    (candidate) => candidate.schemaPointer === change.pointer,
+  )
+  if (!field) return draft
+
+  const nextField = (() => {
+    switch (change.type) {
+      case 'requiredChanged':
+        return { ...field, required: change.required }
+      case 'nullableChanged':
+        return { ...field, nullable: change.nullable }
+      case 'enumChanged':
+        return { ...field, enumValues: change.enumValues }
+      case 'descriptionChanged':
+        return { ...field, description: change.description }
+    }
+  })()
+
+  return applyDraftContractProjection(draft, {
+    ...draft.contract,
+    fields: draft.contract.fields.map((candidate) =>
+      candidate.schemaPointer === change.pointer ? nextField : candidate,
+    ),
+  })
 }
 
 export function getDocumentDraftSnapshot(draft: DocumentDraft): string {
@@ -335,14 +342,8 @@ export function prepareDocumentWrite(draft: DocumentDraft): DocumentWriteInput {
   if (!examplesAreValid(draft.examples)) {
     throw new Error('All examples must contain valid JSON')
   }
-  if (
-    draft.inferenceStatus !== 'ready' ||
-    !draft.jsonSchema ||
-    !draft.contract
-  ) {
-    throw new Error(
-      draft.inferenceError ?? 'Contract inference is not complete',
-    )
+  if (!draft.jsonSchema || !draft.contract) {
+    throw new Error('Contract inference is not complete')
   }
   if (draft.schemaDiagnostics.length > 0) {
     throw new Error('All examples must satisfy the contract')

@@ -11,9 +11,12 @@ editor presentation, and persist a canonical write input through Convex.
 
 ```text
 TanStack route
-  -> React document-draft adapter
-    -> pure document-draft module
-      -> contract inference and diagnostics
+  -> React document-editor controller
+    -> XState document-editor machine
+      -> pure document-draft module
+      -> contract worker and persistence actors
+    -> UI view model and commands
+      -> editor presentation
   -> Convex generated client
     -> document mutation
       -> shared persistence preparation
@@ -34,12 +37,23 @@ The worker returns a JSON Schema Draft 7 contract without blocking the editor.
 The draft applies user-authored overrides, validates every example with Ajv,
 and derives the flattened compatibility contract used by the inspector.
 
-`src/hooks/use-document-draft.ts` is a React adapter over that interface. Route
-modules use the adapter but remain responsible only for loading, saving,
-navigation, and route-specific presentation.
+`src/lib/document-editor-machine.ts` coordinates analysis, persistence, and
+export as parallel XState regions. It invokes Quicktype, TypeScript generation,
+and route-provided persistence as actors. Editing events call the pure draft
+transitions instead of duplicating domain behavior in machine assignments.
 
-Tests exercise the pure draft interface. They don't render React or inspect
-private state inside presentation modules.
+`src/hooks/use-document-editor.ts` owns the machine actor and browser worker
+lifecycle. It exposes a `model` and `commands` interface defined by
+`src/lib/document-editor-model.ts`. Presentation modules don't consume XState
+snapshots, Comlink proxies, Convex mutations, or writable compatibility
+contracts.
+
+Routes initialize the draft, inject create or update persistence, and handle
+navigation. The same editor controller serves create and saved views.
+
+Tests exercise pure draft transitions, machine events and snapshots, and the
+derived UI view model. They don't inspect private state inside presentation
+modules.
 
 ## Contract modules
 
@@ -61,6 +75,21 @@ The worker boundary uses Comlink for typed request correlation, errors, and
 proxy cleanup. A contract-specific client owns the worker lifecycle and adds
 local request cancellation to the `infer` and `generateTypeScript` methods, so
 React code doesn't handle message IDs, proxies, or raw worker events.
+
+## Presentation seam
+
+`JsonEditorPanel` renders the editor view model and sends commands. The model
+uses discriminated states for contract analysis, submission, and export, so
+unavailable capabilities include a stable reason instead of unrelated status
+and `disabled` flags.
+
+Contract fields emit JSON-Pointer override commands. The document draft applies
+those commands to the inferred schema and derives the flattened contract. This
+keeps the compatibility projection read-only at the presentation boundary.
+
+Components retain local state only for visual interaction, such as expanded
+diagnostics or an enum input draft. Workflow state and asynchronous errors live
+in the editor machine.
 
 ## Shared domain modules
 

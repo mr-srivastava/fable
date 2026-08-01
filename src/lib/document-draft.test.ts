@@ -10,7 +10,7 @@ import {
   prepareDocumentWrite,
   removeDraftExample,
   renameDraftExample,
-  updateDraftContract,
+  updateDraftContractOverride,
   updateDraftExample,
 } from '@/lib/document-draft'
 import { inferJsonSchema } from '@/lib/contract/quicktype'
@@ -40,15 +40,15 @@ describe('document draft', () => {
     )
     expect(idField).toBeDefined()
 
-    const annotated = updateDraftContract(initial, {
-      ...initial.contract!,
-      fields: [
-        {
-          ...idField!,
-          description: 'Stable identifier',
-          enumValues: ['1', '2'],
-        },
-      ],
+    const described = updateDraftContractOverride(initial, {
+      type: 'descriptionChanged',
+      pointer: idField!.schemaPointer!,
+      description: 'Stable identifier',
+    })
+    const annotated = updateDraftContractOverride(described, {
+      type: 'enumChanged',
+      pointer: idField!.schemaPointer!,
+      enumValues: ['1', '2'],
     })
     const changed = updateDraftExample(
       annotated,
@@ -76,7 +76,6 @@ describe('document draft', () => {
     const initial = createDocumentDraft([example('one', { id: '1' })])
     const invalid = updateDraftExample(initial, 'one', '{', 2)
 
-    expect(invalid.contractDisabled).toBe(true)
     expect(invalid.diagnostics).toBeUndefined()
     expect(invalid.contract).toEqual(initial.contract)
   })
@@ -143,11 +142,10 @@ describe('document draft', () => {
     const field = initial.contract!.fields.find(
       (item) => item.path === 'status',
     )!
-    const constrained = updateDraftContract(initial, {
-      ...initial.contract!,
-      fields: initial.contract!.fields.map((item) =>
-        item.path === 'status' ? { ...field, enumValues: ['error'] } : item,
-      ),
+    const constrained = updateDraftContractOverride(initial, {
+      type: 'enumChanged',
+      pointer: field.schemaPointer!,
+      enumValues: ['error'],
     })
 
     expect(constrained.schemaDiagnostics).toEqual([
@@ -158,15 +156,11 @@ describe('document draft', () => {
     )
   })
 
-  it('marks changed examples pending while retaining the last schema', async () => {
+  it('retains the last schema when examples change', async () => {
     const initial = await readyDraft([example('one', { id: 1 })])
     const changed = updateDraftExample(initial, 'one', '{"id":2}', 2)
 
-    expect(changed.inferenceStatus).toBe('pending')
     expect(changed.jsonSchema).toBe(initial.jsonSchema)
-    expect(() => prepareDocumentWrite(changed)).toThrow(
-      'Contract inference is not complete',
-    )
   })
 
   it('produces stable snapshots for dirty-state comparison', () => {

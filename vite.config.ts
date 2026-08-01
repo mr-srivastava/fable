@@ -45,11 +45,10 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-data'
   }
 
-  if (id.includes('/@radix-ui/') || id.includes('/radix-ui/')) {
-    return 'vendor-radix'
-  }
-
-  if (id.includes('/react/') || id.includes('/react-dom/')) {
+  if (
+    id.includes('/node_modules/react/') ||
+    id.includes('/node_modules/react-dom/')
+  ) {
     return 'vendor-react'
   }
 

@@ -1,11 +1,10 @@
-import { useState } from 'react'
 import { Download, FileCode2 } from 'lucide-react'
+import type { ExportViewState } from '@/lib/document-editor-model'
 import { Button } from '@/components/ui/button'
 
 type DocumentExportMenuProps = {
-  jsonSchema?: string
+  state: ExportViewState
   generateTypeScript: () => Promise<string>
-  disabled: boolean
 }
 
 function downloadText(filename: string, contents: string, type: string) {
@@ -18,22 +17,21 @@ function downloadText(filename: string, contents: string, type: string) {
 }
 
 export function DocumentExportMenu({
-  jsonSchema,
+  state,
   generateTypeScript,
-  disabled,
 }: DocumentExportMenuProps) {
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string>()
+  const disabled = state.status === 'unavailable'
+  const generating = state.status === 'generating'
+  const jsonSchema =
+    state.status === 'unavailable' ? undefined : state.jsonSchema
 
-  async function withTypeScript(action: (source: string) => void) {
-    setGenerating(true)
-    setError(undefined)
+  async function withTypeScript(
+    action: (source: string) => void | Promise<void>,
+  ) {
     try {
-      action(await generateTypeScript())
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Export failed')
-    } finally {
-      setGenerating(false)
+      await action(await generateTypeScript())
+    } catch {
+      // The editor machine exposes the structured export failure.
     }
   }
 
@@ -41,6 +39,17 @@ export function DocumentExportMenu({
     <details className="group relative">
       <summary
         aria-disabled={disabled || generating}
+        onClick={(event) => {
+          if (disabled || generating) event.preventDefault()
+        }}
+        onKeyDown={(event) => {
+          if (
+            (disabled || generating) &&
+            (event.key === 'Enter' || event.key === ' ')
+          ) {
+            event.preventDefault()
+          }
+        }}
         className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent group-open:bg-accent aria-disabled:pointer-events-none aria-disabled:opacity-50"
       >
         <FileCode2 className="size-4" />
@@ -54,7 +63,10 @@ export function DocumentExportMenu({
           className="justify-start"
           disabled={disabled}
           onClick={() =>
-            jsonSchema && navigator.clipboard.writeText(jsonSchema)
+            jsonSchema &&
+            void navigator.clipboard
+              .writeText(jsonSchema)
+              .catch(() => undefined)
           }
         >
           Copy JSON Schema
@@ -102,7 +114,11 @@ export function DocumentExportMenu({
         >
           <Download /> Download TypeScript
         </Button>
-        {error && <p className="px-2 py-1 text-xs text-destructive">{error}</p>}
+        {state.status === 'failed' && (
+          <p role="alert" className="px-2 py-1 text-xs text-destructive">
+            {state.message}
+          </p>
+        )}
       </div>
     </details>
   )

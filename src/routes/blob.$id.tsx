@@ -10,9 +10,8 @@ import { api } from '../../convex/_generated/api'
 import type { JsonSchema } from '@shared/document'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
-import { useDocumentDraft } from '@/hooks/use-document-draft'
-import { useValidatedDocumentSubmit } from '@/hooks/use-validated-document-submit'
-import { createDocumentDraft, prepareDocumentWrite } from '@/lib/document-draft'
+import { useDocumentEditor } from '@/hooks/use-document-editor'
+import { createDocumentDraft } from '@/lib/document-draft'
 import { normalizeDocumentExamples } from '@/lib/document-examples'
 
 export const Route = createFileRoute('/blob/$id')({
@@ -49,11 +48,17 @@ function DocumentEditor({
       ),
     [document],
   )
-  const editor = useDocumentDraft(initialDraft)
   const updateDocument = useMutation(api.documents.update)
+  const editor = useDocumentEditor({
+    initialDraft,
+    persistDocument: async (input) => {
+      await updateDocument({ id, ...input })
+      return { type: 'updated' }
+    },
+  })
 
   useEffect(() => {
-    if (!editor.hasUnsavedChanges) return
+    if (!editor.model.hasUnsavedChanges) return
 
     function handleBeforeUnload(event: BeforeUnloadEvent) {
       event.preventDefault()
@@ -62,15 +67,7 @@ function DocumentEditor({
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [editor.hasUnsavedChanges])
-
-  const { error, handleSubmit } = useValidatedDocumentSubmit(
-    () => editor.activeExample.data,
-    async () => {
-      await updateDocument({ id, ...prepareDocumentWrite(editor.draft) })
-    },
-    'Failed to update document',
-  )
+  }, [editor.model.hasUnsavedChanges])
 
   const documentUrl =
     typeof window !== 'undefined'
@@ -93,44 +90,11 @@ function DocumentEditor({
     <div className="min-h-screen bg-background">
       <div className="space-y-6">
         <JsonEditorPanel
-          mode="view"
-          value={editor.activeExample.data}
-          onChange={editor.updateExample}
-          examples={{
-            items: editor.draft.examples,
-            activeId: editor.draft.activeExampleId,
-            select: editor.selectExample,
-            rename: editor.renameExample,
-            add: editor.addExample,
-            remove: editor.removeExample,
-          }}
-          error={error ?? undefined}
-          actions={{ submit: handleSubmit, reset: editor.reset }}
-          validation={{
-            payloadStatus: editor.payloadStatus,
-            canSubmit: editor.canSubmit,
-          }}
+          mode={{ type: 'saved', documentUrl, apiUrl }}
+          model={editor.model}
+          commands={editor.commands}
           title="Saved specimen"
           description={`Last updated ${updatedAtFormatted}`}
-          documentUrl={documentUrl}
-          apiUrl={apiUrl}
-          hasUnsavedChanges={editor.hasUnsavedChanges}
-          contract={{
-            value: editor.draft.contract,
-            change: editor.updateContract,
-            disabled: editor.draft.contractDisabled,
-            diagnostics: editor.draft.diagnostics,
-            schemaDiagnostics: editor.draft.schemaDiagnostics,
-            inferenceStatus: editor.draft.inferenceStatus,
-            inferenceError: editor.draft.inferenceError,
-          }}
-          exports={{
-            jsonSchema: editor.draft.jsonSchema
-              ? `${JSON.stringify(editor.draft.jsonSchema, null, 2)}\n`
-              : undefined,
-            generateTypeScript: editor.generateTypeScript,
-            disabled: !editor.canSubmit,
-          }}
         />
       </div>
     </div>

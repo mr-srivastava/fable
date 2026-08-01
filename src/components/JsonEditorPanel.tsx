@@ -5,6 +5,7 @@ import type {
   JsonEditorPanelHeaderProps,
   JsonEditorPanelProps,
 } from './JsonEditorPanel.types'
+import type { PayloadViewState } from '@/lib/document-editor-model'
 import { ContractPanel } from '@/components/contract/ContractPanel'
 import { ExamplesTabs } from '@/components/examples/ExamplesTabs'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
@@ -29,7 +30,7 @@ const CREATE_DEFAULTS = {
     'Paste JSON to infer field metadata, annotate the contract, and share the specimen.',
 } as const
 
-type PayloadStatus = 'waiting' | 'valid' | 'invalid'
+type PayloadStatus = PayloadViewState['status']
 
 function JsonEditorPanelHeader({
   mode,
@@ -122,8 +123,8 @@ function ContractDiagnosticsNotice({
   contractDiagnostics,
   examples,
 }: {
-  contractDiagnostics?: JsonEditorPanelProps['contract']['diagnostics']
-  examples: JsonEditorPanelProps['examples']['items']
+  contractDiagnostics?: JsonEditorPanelProps['model']['contract']['diagnostics']
+  examples: JsonEditorPanelProps['model']['examples']['items']
 }) {
   const [dismissed, setDismissed] = useState(false)
   const [showGroups, setShowGroups] = useState(false)
@@ -192,8 +193,11 @@ function ContractDiagnosticsNotice({
 function SchemaStatusNotice({
   contract,
   examples,
-}: Pick<JsonEditorPanelProps, 'contract' | 'examples'>) {
-  if (contract.inferenceStatus === 'pending') {
+}: {
+  contract: JsonEditorPanelProps['model']['contract']
+  examples: JsonEditorPanelProps['model']['examples']
+}) {
+  if (contract.status.type === 'inferring') {
     return (
       <Alert>
         <AlertTitle>Inferring contract</AlertTitle>
@@ -203,20 +207,25 @@ function SchemaStatusNotice({
       </Alert>
     )
   }
-  if (contract.inferenceStatus === 'error') {
-    const invalidJson = contract.inferenceError?.includes('valid JSON')
+  if (contract.status.type === 'invalidJson') {
     return (
       <Alert variant="destructive">
-        <AlertTitle>
-          {invalidJson ? 'Invalid JSON' : 'Invalid contract'}
-        </AlertTitle>
+        <AlertTitle>Invalid JSON</AlertTitle>
         <AlertDescription>
-          {contract.inferenceError ?? 'The contract could not be generated.'}
+          Fix the malformed example before contract inference can continue.
         </AlertDescription>
       </Alert>
     )
   }
-  if (contract.schemaDiagnostics.length === 0) return null
+  if (contract.status.type === 'invalidContract') {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Invalid contract</AlertTitle>
+        <AlertDescription>{contract.status.message}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (contract.status.type !== 'violations') return null
 
   const names = new Map(
     examples.items.map((example) => [example.id, example.name]),
@@ -253,9 +262,10 @@ function PayloadPanel({
   onDeleteExample,
   hasUnsavedChanges,
   validationCounts,
+  canAddExample,
 }: JsonEditorGridProps & {
   status: PayloadStatus
-  examples: JsonEditorPanelProps['examples']['items']
+  examples: JsonEditorPanelProps['model']['examples']['items']
   activeExampleId: string
   onSelectExample: (id: string) => void
   onRenameExample: (id: string, name: string) => void
@@ -263,6 +273,7 @@ function PayloadPanel({
   onDeleteExample: (id: string) => void
   hasUnsavedChanges?: boolean
   validationCounts: Record<string, number>
+  canAddExample: boolean
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -288,6 +299,7 @@ function PayloadPanel({
         onAdd={onAddExample}
         onDelete={onDeleteExample}
         validationCounts={validationCounts}
+        canAdd={canAddExample}
       />
       <Tabs defaultValue="editor" className="gap-3">
         <TabsList>
@@ -335,37 +347,18 @@ function FormattedPanel({ value }: Pick<JsonEditorGridProps, 'value'>) {
 }
 
 export function JsonEditorPanel(props: JsonEditorPanelProps) {
-  const {
-    value,
-    onChange,
-    error,
-    actions,
-    description: descriptionProp,
-    title,
-    mode,
-    examples,
-    contract,
-    validation,
-    hasUnsavedChanges,
-  } = props
+  const { model, commands, description: descriptionProp, title, mode } = props
+  const { contract, examples, payload } = model
 
-  const isCreate = mode === 'create'
+  const isCreate = mode.type === 'create'
   const description =
     descriptionProp ?? (isCreate ? CREATE_DEFAULTS.description : undefined)
-  const validationCounts = Object.fromEntries(
-    examples.items.map((example) => [
-      example.id,
-      contract.schemaDiagnostics.filter(
-        (diagnostic) => diagnostic.exampleId === example.id,
-      ).length,
-    ]),
-  )
 
   return (
     <>
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 md:pb-24">
         <JsonEditorPanelHeader
-          mode={mode}
+          mode={mode.type}
           title={title}
           description={description}
         />
@@ -383,22 +376,25 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           </TabsList>
           <TabsContent value="payload">
             <PayloadPanel
-              value={value}
-              onChange={onChange}
-              error={error}
-              status={validation.payloadStatus}
+              value={payload.value}
+              onChange={(json) =>
+                commands.updateExample(examples.activeId, json)
+              }
+              error={payload.status === 'invalid' ? payload.message : undefined}
+              status={payload.status}
               examples={examples.items}
               activeExampleId={examples.activeId}
-              onSelectExample={examples.select}
-              onRenameExample={examples.rename}
-              onAddExample={examples.add}
-              onDeleteExample={examples.remove}
-              hasUnsavedChanges={hasUnsavedChanges}
-              validationCounts={validationCounts}
+              onSelectExample={commands.selectExample}
+              onRenameExample={commands.renameExample}
+              onAddExample={commands.addExample}
+              onDeleteExample={commands.removeExample}
+              hasUnsavedChanges={model.hasUnsavedChanges}
+              validationCounts={examples.validationCounts}
+              canAddExample={examples.canAdd}
             />
           </TabsContent>
           <TabsContent value="formatted">
-            <FormattedPanel value={value} />
+            <FormattedPanel value={payload.value} />
           </TabsContent>
           <TabsContent value="contract">
             <ContractDiagnosticsNotice
@@ -407,8 +403,8 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
             />
             <ContractPanel
               contract={contract.value}
-              disabled={contract.disabled}
-              onChange={contract.change}
+              disabled={contract.status.type === 'invalidJson'}
+              onOverrideChange={commands.changeContractOverride}
               schemaDiagnostics={contract.schemaDiagnostics}
             />
           </TabsContent>
@@ -420,18 +416,21 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         >
           <ResizablePanel defaultSize={56} minSize={42}>
             <PayloadPanel
-              value={value}
-              onChange={onChange}
-              error={error}
-              status={validation.payloadStatus}
+              value={payload.value}
+              onChange={(json) =>
+                commands.updateExample(examples.activeId, json)
+              }
+              error={payload.status === 'invalid' ? payload.message : undefined}
+              status={payload.status}
               examples={examples.items}
               activeExampleId={examples.activeId}
-              onSelectExample={examples.select}
-              onRenameExample={examples.rename}
-              onAddExample={examples.add}
-              onDeleteExample={examples.remove}
-              hasUnsavedChanges={hasUnsavedChanges}
-              validationCounts={validationCounts}
+              onSelectExample={commands.selectExample}
+              onRenameExample={commands.renameExample}
+              onAddExample={commands.addExample}
+              onDeleteExample={commands.removeExample}
+              hasUnsavedChanges={model.hasUnsavedChanges}
+              validationCounts={examples.validationCounts}
+              canAddExample={examples.canAdd}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -443,29 +442,15 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               />
               <ContractPanel
                 contract={contract.value}
-                disabled={contract.disabled}
-                onChange={contract.change}
+                disabled={contract.status.type === 'invalidJson'}
+                onOverrideChange={commands.changeContractOverride}
                 schemaDiagnostics={contract.schemaDiagnostics}
               />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </section>
-      <DocumentEditorActions
-        onSubmit={actions.submit}
-        onReset={actions.reset}
-        disabled={!validation.canSubmit}
-        exports={props.exports}
-        {...(mode === 'view'
-          ? {
-              mode: 'view',
-              documentUrl: props.documentUrl,
-              apiUrl: props.apiUrl,
-              json: value,
-              hasUnsavedChanges,
-            }
-          : { mode: 'create' })}
-      />
+      <DocumentEditorActions mode={mode} model={model} commands={commands} />
     </>
   )
 }

@@ -12,6 +12,7 @@ type ExamplesTabsProps = {
   onAdd: () => void
   onDelete: (id: string) => void
   validationCounts: Record<string, number>
+  canAdd: boolean
 }
 
 export function ExamplesTabs({
@@ -22,6 +23,7 @@ export function ExamplesTabs({
   onAdd,
   onDelete,
   validationCounts,
+  canAdd,
 }: ExamplesTabsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2" role="tablist">
@@ -84,7 +86,13 @@ export function ExamplesTabs({
         )
       })}
 
-      <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!canAdd}
+        onClick={onAdd}
+      >
         <Plus />
         Example
       </Button>

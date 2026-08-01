@@ -1,6 +1,7 @@
 import { EnumValuesInput } from './EnumValuesInput'
 import type { JsonContractField } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
+import type { ContractOverrideChange } from '@/lib/document-draft'
 import {
   AccordionContent,
   AccordionItem,
@@ -25,7 +26,7 @@ type ContractFieldRowProps = {
   label: string
   isContainer: boolean
   childCount?: number
-  onChange: (field: JsonContractField) => void
+  onOverrideChange: (change: ContractOverrideChange) => void
   schemaDiagnostics?: Array<SchemaValidationDiagnostic>
 }
 
@@ -35,10 +36,11 @@ export function ContractFieldReferenceItem({
   label,
   isContainer,
   childCount = 0,
-  onChange,
+  onOverrideChange,
   schemaDiagnostics = [],
 }: ContractFieldRowProps) {
   const isEditable = !isContainer
+  const pointer = field.schemaPointer
 
   return (
     <AccordionItem
@@ -100,8 +102,14 @@ export function ContractFieldReferenceItem({
               <Switch
                 size="sm"
                 checked={field.required}
+                disabled={!pointer}
                 onCheckedChange={(checked) =>
-                  onChange({ ...field, required: checked })
+                  pointer &&
+                  onOverrideChange({
+                    type: 'requiredChanged',
+                    pointer,
+                    required: checked,
+                  })
                 }
               />
             </label>
@@ -110,8 +118,14 @@ export function ContractFieldReferenceItem({
               <Switch
                 size="sm"
                 checked={field.nullable}
+                disabled={!pointer}
                 onCheckedChange={(checked) =>
-                  onChange({ ...field, nullable: checked })
+                  pointer &&
+                  onOverrideChange({
+                    type: 'nullableChanged',
+                    pointer,
+                    nullable: checked,
+                  })
                 }
               />
             </label>
@@ -125,16 +139,26 @@ export function ContractFieldReferenceItem({
                 <FieldLabel>Enum values</FieldLabel>
                 <EnumValuesInput
                   value={field.enumValues}
-                  onChange={(enumValues) => onChange({ ...field, enumValues })}
+                  onChange={(enumValues) =>
+                    pointer &&
+                    onOverrideChange({
+                      type: 'enumChanged',
+                      pointer,
+                      enumValues,
+                    })
+                  }
                 />
               </Field>
               <Field>
                 <FieldLabel>Description</FieldLabel>
                 <Textarea
                   value={field.description ?? ''}
+                  disabled={!pointer}
                   onChange={(event) =>
-                    onChange({
-                      ...field,
+                    pointer &&
+                    onOverrideChange({
+                      type: 'descriptionChanged',
+                      pointer,
                       description: event.currentTarget.value || undefined,
                     })
                   }
@@ -149,9 +173,12 @@ export function ContractFieldReferenceItem({
               <FieldContent>
                 <Input
                   value={field.description ?? ''}
+                  disabled={!pointer}
                   onChange={(event) =>
-                    onChange({
-                      ...field,
+                    pointer &&
+                    onOverrideChange({
+                      type: 'descriptionChanged',
+                      pointer,
                       description: event.currentTarget.value || undefined,
                     })
                   }

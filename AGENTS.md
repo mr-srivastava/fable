@@ -39,7 +39,9 @@ The important modules are organized as follows:
 
 - `src/routes/` owns route loading, persistence calls, and navigation.
 - `src/components/` contains presentation modules and UI primitives.
-- `src/hooks/use-document-draft.ts` adapts the pure draft module to React.
+- `src/hooks/use-document-editor.ts` adapts the editor machine to React.
+- `src/lib/document-editor-machine.ts` owns editor workflow orchestration.
+- `src/lib/document-editor-model.ts` defines the UI-facing model and commands.
 - `src/lib/document-draft.ts` owns document editing transitions.
 - `src/lib/contract/` owns contract inference, diagnostics, display, and edits.
 - `src/lib/json/` owns JSON parsing, formatting, and per-example validation.
