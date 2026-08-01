@@ -39,4 +39,5 @@ export type JsonEditorGridProps = {
   value: string
   onChange: (value: string) => void
   error?: string
+  size?: number
 }

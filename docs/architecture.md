@@ -56,7 +56,8 @@ navigation. The same editor controller serves create and saved views.
 
 Tests exercise pure draft transitions, machine events and snapshots, and the
 derived UI view model. They don't inspect private state inside presentation
-modules.
+modules. See the [testing guide](testing.md) for the test taxonomy, naming
+conventions, runtime projects, and shared fixtures.
 
 ## Contract modules
 

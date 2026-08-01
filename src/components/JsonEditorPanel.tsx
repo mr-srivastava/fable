@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { formatJson } from '@/lib/json'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
@@ -260,6 +261,7 @@ function PayloadPanel({
   value,
   onChange,
   error,
+  size,
   status,
   examples,
   activeExampleId,
@@ -290,10 +292,11 @@ function PayloadPanel({
   onActivePathChange: (path?: string) => void
   onActivePathPresenceChange: (present: boolean) => void
 }) {
-  const formattedValue = status === 'valid' ? formatJson(value) : ''
-  const canFormat = formattedValue !== '' && formattedValue !== value
+  const canFormat = status === 'valid' && value.trim() !== ''
   const handleFormat = () => {
-    if (canFormat) onChange(formattedValue)
+    if (!canFormat) return
+    const formattedValue = formatJson(value)
+    if (formattedValue && formattedValue !== value) onChange(formattedValue)
   }
 
   return (
@@ -359,6 +362,7 @@ function PayloadPanel({
             value={value}
             onChange={onChange}
             error={error}
+            size={size}
             activePath={activePath}
             contractPaths={contractPaths}
             onActivePathChange={onActivePathChange}
@@ -375,6 +379,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const { contract, examples, payload } = model
   const [activePath, setActivePath] = useState<string>()
   const [activePathPresent, setActivePathPresent] = useState(true)
+  const isDesktop = useMediaQuery('(min-width: 768px)')
   const contractPaths = useMemo(
     () => new Set(contract.value?.fields.map((field) => field.path) ?? []),
     [contract.value?.fields],
@@ -383,6 +388,47 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const isCreate = mode.type === 'create'
   const description =
     descriptionProp ?? (isCreate ? CREATE_DEFAULTS.description : undefined)
+
+  const payloadPanel = (
+    <PayloadPanel
+      value={payload.value}
+      onChange={(json) => commands.updateExample(examples.activeId, json)}
+      error={payload.status === 'invalid' ? payload.message : undefined}
+      size={payload.size}
+      status={payload.status}
+      examples={examples.items}
+      activeExampleId={examples.activeId}
+      onSelectExample={commands.selectExample}
+      onRenameExample={commands.renameExample}
+      onAddExample={commands.addExample}
+      onDeleteExample={commands.removeExample}
+      hasUnsavedChanges={model.hasUnsavedChanges}
+      validationCounts={examples.validationCounts}
+      canAddExample={examples.canAdd}
+      activePath={activePath}
+      contractPaths={contractPaths}
+      onActivePathChange={setActivePath}
+      onActivePathPresenceChange={setActivePathPresent}
+    />
+  )
+
+  const contractPanel = (
+    <div className="flex flex-col gap-3">
+      <ContractDiagnosticsNotice
+        contractDiagnostics={contract.diagnostics}
+        examples={examples.items}
+      />
+      <ContractPanel
+        contract={contract.value}
+        disabled={contract.status.type === 'invalidJson'}
+        onOverrideChange={commands.changeContractOverride}
+        schemaDiagnostics={contract.schemaDiagnostics}
+        activePath={activePath}
+        activePathPresent={activePathPresent}
+        onSelectPath={setActivePath}
+      />
+    </div>
+  )
 
   return (
     <>
@@ -394,101 +440,33 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         />
         <SchemaStatusNotice contract={contract} examples={examples} />
 
-        <Tabs
-          defaultValue="payload"
-          className="gap-4 md:hidden"
-          aria-label="Workspace panels"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="payload">Examples</TabsTrigger>
-            <TabsTrigger value="contract">Contract</TabsTrigger>
-          </TabsList>
-          <TabsContent value="payload">
-            <PayloadPanel
-              value={payload.value}
-              onChange={(json) =>
-                commands.updateExample(examples.activeId, json)
-              }
-              error={payload.status === 'invalid' ? payload.message : undefined}
-              status={payload.status}
-              examples={examples.items}
-              activeExampleId={examples.activeId}
-              onSelectExample={commands.selectExample}
-              onRenameExample={commands.renameExample}
-              onAddExample={commands.addExample}
-              onDeleteExample={commands.removeExample}
-              hasUnsavedChanges={model.hasUnsavedChanges}
-              validationCounts={examples.validationCounts}
-              canAddExample={examples.canAdd}
-              activePath={activePath}
-              contractPaths={contractPaths}
-              onActivePathChange={setActivePath}
-              onActivePathPresenceChange={setActivePathPresent}
-            />
-          </TabsContent>
-          <TabsContent value="contract">
-            <ContractDiagnosticsNotice
-              contractDiagnostics={contract.diagnostics}
-              examples={examples.items}
-            />
-            <ContractPanel
-              contract={contract.value}
-              disabled={contract.status.type === 'invalidJson'}
-              onOverrideChange={commands.changeContractOverride}
-              schemaDiagnostics={contract.schemaDiagnostics}
-              activePath={activePath}
-              activePathPresent={activePathPresent}
-              onSelectPath={setActivePath}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <ResizablePanelGroup
-          orientation="horizontal"
-          className="hidden min-h-[36rem] gap-4 md:flex"
-        >
-          <ResizablePanel defaultSize={56} minSize={42}>
-            <PayloadPanel
-              value={payload.value}
-              onChange={(json) =>
-                commands.updateExample(examples.activeId, json)
-              }
-              error={payload.status === 'invalid' ? payload.message : undefined}
-              status={payload.status}
-              examples={examples.items}
-              activeExampleId={examples.activeId}
-              onSelectExample={commands.selectExample}
-              onRenameExample={commands.renameExample}
-              onAddExample={commands.addExample}
-              onDeleteExample={commands.removeExample}
-              hasUnsavedChanges={model.hasUnsavedChanges}
-              validationCounts={examples.validationCounts}
-              canAddExample={examples.canAdd}
-              activePath={activePath}
-              contractPaths={contractPaths}
-              onActivePathChange={setActivePath}
-              onActivePathPresenceChange={setActivePathPresent}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={44} minSize={32}>
-            <div className="flex flex-col gap-3">
-              <ContractDiagnosticsNotice
-                contractDiagnostics={contract.diagnostics}
-                examples={examples.items}
-              />
-              <ContractPanel
-                contract={contract.value}
-                disabled={contract.status.type === 'invalidJson'}
-                onOverrideChange={commands.changeContractOverride}
-                schemaDiagnostics={contract.schemaDiagnostics}
-                activePath={activePath}
-                activePathPresent={activePathPresent}
-                onSelectPath={setActivePath}
-              />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        {isDesktop ? (
+          <ResizablePanelGroup
+            orientation="horizontal"
+            className="min-h-[36rem] gap-4"
+          >
+            <ResizablePanel defaultSize={56} minSize={42}>
+              {payloadPanel}
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={44} minSize={32}>
+              {contractPanel}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <Tabs
+            defaultValue="payload"
+            className="gap-4"
+            aria-label="Workspace panels"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="payload">Examples</TabsTrigger>
+              <TabsTrigger value="contract">Contract</TabsTrigger>
+            </TabsList>
+            <TabsContent value="payload">{payloadPanel}</TabsContent>
+            <TabsContent value="contract">{contractPanel}</TabsContent>
+          </Tabs>
+        )}
       </section>
       <DocumentEditorActions mode={mode} model={model} commands={commands} />
     </>

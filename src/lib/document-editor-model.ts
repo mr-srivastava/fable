@@ -14,9 +14,9 @@ import {
 import { parseJsonSafely } from '@/lib/json'
 
 export type PayloadViewState =
-  | { status: 'waiting'; value: string }
-  | { status: 'valid'; value: string }
-  | { status: 'invalid'; value: string; message: string }
+  | { status: 'waiting'; value: string; size: 0 }
+  | { status: 'valid'; value: string; size: number }
+  | { status: 'invalid'; value: string; message: string; size?: number }
 
 export type ContractViewStatus =
   | { type: 'invalidJson' }
@@ -169,13 +169,14 @@ export function createDocumentEditorViewModel(
   const activeExample = getActiveExample(draft)
   const parsed = parseJsonSafely(activeExample.data)
   const payload: PayloadViewState = !activeExample.data.trim()
-    ? { status: 'waiting', value: activeExample.data }
+    ? { status: 'waiting', value: activeExample.data, size: 0 }
     : parsed.ok
-      ? { status: 'valid', value: activeExample.data }
+      ? { status: 'valid', value: activeExample.data, size: parsed.size }
       : {
           status: 'invalid',
           value: activeExample.data,
           message: parsed.error,
+          size: parsed.size,
         }
 
   return {

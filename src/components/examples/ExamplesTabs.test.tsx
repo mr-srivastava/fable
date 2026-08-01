@@ -1,17 +1,13 @@
-// @vitest-environment jsdom
-
-import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ExamplesTabs } from './ExamplesTabs'
+import { buildDocumentExample } from '@/test/factories/document'
 
 const examples = [
-  { id: 'one', name: 'Success', data: '{}', createdAt: 1 },
-  { id: 'two', name: 'Error', data: '{}', createdAt: 2 },
+  buildDocumentExample({ name: 'Success' }),
+  buildDocumentExample({ id: 'two', name: 'Error', createdAt: 2 }),
 ]
-
-afterEach(cleanup)
 
 function renderTabs(
   overrides: Partial<React.ComponentProps<typeof ExamplesTabs>> = {},

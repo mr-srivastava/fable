@@ -1,76 +1,68 @@
-// @vitest-environment jsdom
-
-import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { JsonEditorPanel } from './JsonEditorPanel'
-import type { DocumentEditorViewModel } from '@/lib/document-editor-model'
+import {
+  buildDocumentEditorCommands,
+  buildDocumentEditorModel,
+} from '@/test/factories/document-editor'
 
 vi.mock('@/components/JsonEditor', () => ({
   JsonEditor: () => <div>JSON editor</div>,
 }))
 
-beforeAll(() => {
-  globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  Element.prototype.scrollIntoView = vi.fn()
-  window.matchMedia = vi.fn().mockReturnValue({ matches: true })
-})
-
-afterEach(cleanup)
-
-const model: DocumentEditorViewModel = {
-  payload: { status: 'valid', value: '{}' },
-  examples: {
-    items: [{ id: 'one', name: 'Example', data: '{}', createdAt: 1 }],
-    activeId: 'one',
-    validationCounts: {},
-    canAdd: true,
-  },
-  contract: { status: { type: 'ready' }, schemaDiagnostics: [] },
-  submission: { status: 'available' },
-  exports: { status: 'unavailable' },
-  hasUnsavedChanges: false,
-}
-
 describe('JsonEditorPanel workspace hierarchy', () => {
-  it('uses Examples and Contract as the mobile workspace with one editable JSON surface', () => {
+  it('renders one editable JSON surface in the desktop workspace', () => {
     render(
       <JsonEditorPanel
         mode={{ type: 'create' }}
-        model={model}
-        commands={{
-          updateExample: vi.fn(),
-          selectExample: vi.fn(),
-          renameExample: vi.fn(),
-          addExample: vi.fn(),
-          removeExample: vi.fn(),
-          changeContractOverride: vi.fn(),
-          reset: vi.fn(),
-          submit: vi.fn(),
-          generateTypeScript: vi.fn(),
-        }}
+        model={buildDocumentEditorModel()}
+        commands={buildDocumentEditorCommands()}
+      />,
+    )
+
+    expect(screen.getAllByText('JSON editor')).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Format JSON' })).toHaveLength(
+      1,
+    )
+    expect(
+      document.querySelector('[data-slot="resizable-panel-group"]'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('tab', { name: 'Contract' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('uses Examples and Contract tabs with one editable surface on mobile', () => {
+    const matchMedia = vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+        }) satisfies MediaQueryList,
+    )
+
+    render(
+      <JsonEditorPanel
+        mode={{ type: 'create' }}
+        model={buildDocumentEditorModel()}
+        commands={buildDocumentEditorCommands()}
       />,
     )
 
     expect(screen.getByRole('tab', { name: 'Examples' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Contract' })).toBeInTheDocument()
-    expect(
-      screen.queryByRole('tab', { name: 'Formatted' }),
-    ).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Edit' })).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('tab', { name: 'Preview' }),
-    ).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Format JSON' })).toHaveLength(
-      2,
-    )
+    expect(screen.getAllByText('JSON editor')).toHaveLength(1)
     expect(
       document.querySelector('[data-slot="resizable-panel-group"]'),
-    ).toHaveClass('md:flex')
+    ).not.toBeInTheDocument()
+
+    matchMedia.mockRestore()
   })
 
   it('formats valid JSON through the active example command', () => {
@@ -78,27 +70,19 @@ describe('JsonEditorPanel workspace hierarchy', () => {
     render(
       <JsonEditorPanel
         mode={{ type: 'create' }}
-        model={{ ...model, payload: { status: 'valid', value: '{"id":1}' } }}
-        commands={{
-          updateExample,
-          selectExample: vi.fn(),
-          renameExample: vi.fn(),
-          addExample: vi.fn(),
-          removeExample: vi.fn(),
-          changeContractOverride: vi.fn(),
-          reset: vi.fn(),
-          submit: vi.fn(),
-          generateTypeScript: vi.fn(),
-        }}
+        model={buildDocumentEditorModel({
+          payload: { status: 'valid', value: '{"id":1}', size: 8 },
+        })}
+        commands={buildDocumentEditorCommands({ updateExample })}
       />,
     )
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Format JSON' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Format JSON' }))
 
     expect(updateExample).toHaveBeenCalledWith('one', '{\n  "id": 1\n}')
 
     updateExample.mockClear()
-    fireEvent.keyDown(screen.getAllByText('JSON editor')[0], {
+    fireEvent.keyDown(screen.getByText('JSON editor'), {
       altKey: true,
       shiftKey: true,
       key: 'F',
@@ -111,26 +95,17 @@ describe('JsonEditorPanel workspace hierarchy', () => {
     render(
       <JsonEditorPanel
         mode={{ type: 'create' }}
-        model={{
-          ...model,
-          payload: { status: 'invalid', value: '{', message: 'Invalid JSON' },
-        }}
-        commands={{
-          updateExample: vi.fn(),
-          selectExample: vi.fn(),
-          renameExample: vi.fn(),
-          addExample: vi.fn(),
-          removeExample: vi.fn(),
-          changeContractOverride: vi.fn(),
-          reset: vi.fn(),
-          submit: vi.fn(),
-          generateTypeScript: vi.fn(),
-        }}
+        model={buildDocumentEditorModel({
+          payload: {
+            status: 'invalid',
+            value: '{',
+            message: 'Invalid JSON',
+          },
+        })}
+        commands={buildDocumentEditorCommands()}
       />,
     )
 
-    expect(
-      screen.getAllByRole('button', { name: 'Format JSON' })[0],
-    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Format JSON' })).toBeDisabled()
   })
 })

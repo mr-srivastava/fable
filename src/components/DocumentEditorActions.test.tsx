@@ -1,42 +1,21 @@
-// @vitest-environment jsdom
-
-import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 import { DocumentEditorActions } from './DocumentEditorActions'
-import type { DocumentEditorViewModel } from '@/lib/document-editor-model'
-
-afterEach(cleanup)
-
-function buildModel(
-  submission: DocumentEditorViewModel['submission'],
-): DocumentEditorViewModel {
-  return {
-    payload: { status: 'valid', value: '{}' },
-    examples: {
-      items: [{ id: 'one', name: 'Example', data: '{}', createdAt: 1 }],
-      activeId: 'one',
-      validationCounts: {},
-      canAdd: true,
-    },
-    contract: { status: { type: 'ready' }, schemaDiagnostics: [] },
-    submission,
-    exports: { status: 'unavailable' },
-    hasUnsavedChanges: true,
-  }
-}
+import {
+  buildDocumentEditorCommands,
+  buildDocumentEditorModel,
+} from '@/test/factories/document-editor'
 
 describe('DocumentEditorActions', () => {
   it('shows the save blocker as visible, associated guidance', () => {
     render(
       <DocumentEditorActions
         mode={{ type: 'create' }}
-        model={buildModel({ status: 'unavailable', reason: 'invalidJson' })}
-        commands={{
-          submit: vi.fn(),
-          reset: vi.fn(),
-          generateTypeScript: vi.fn(),
-        }}
+        model={buildDocumentEditorModel({
+          submission: { status: 'unavailable', reason: 'invalidJson' },
+          hasUnsavedChanges: true,
+        })}
+        commands={buildDocumentEditorCommands()}
       />,
     )
 

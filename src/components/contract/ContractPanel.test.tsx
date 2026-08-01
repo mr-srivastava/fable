@@ -1,22 +1,7 @@
-// @vitest-environment jsdom
-
-import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ContractPanel } from './ContractPanel'
-
-beforeAll(() => {
-  Element.prototype.scrollIntoView = vi.fn()
-  window.matchMedia = vi.fn().mockReturnValue({ matches: true })
-  globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-})
-
-afterEach(cleanup)
 
 describe('ContractPanel path selection', () => {
   const contract = {

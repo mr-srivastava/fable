@@ -50,7 +50,7 @@ describe('document editor view model', () => {
       snapshot.matches({ analysis: 'ready' }),
     )
     expect(createDocumentEditorViewModel(ready)).toMatchObject({
-      payload: { status: 'valid', value: '{"id":1}' },
+      payload: { status: 'valid', value: '{"id":1}', size: 8 },
       contract: { status: { type: 'ready' } },
       submission: { status: 'available' },
       exports: { status: 'available' },

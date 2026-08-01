@@ -6,7 +6,7 @@ import { EditorView } from '@codemirror/view'
 import { AlertCircle, Check, X } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
 import { getFableCodeMirrorTheme } from '@/lib/codemirror-fable-theme'
-import { MAX_JSON_SIZE, formatBytes, parseJsonSafely } from '@/lib/json'
+import { MAX_JSON_SIZE, formatBytes } from '@/lib/json'
 import { cn } from '@/lib/utils'
 import {
   findJsonPathAtPosition,
@@ -18,6 +18,7 @@ interface JsonEditorProps {
   value: string
   onChange?: (value: string) => void
   error?: string
+  size?: number
   height?: string
   placeholder?: string
   className?: string
@@ -31,6 +32,7 @@ export function JsonEditor({
   value,
   onChange,
   error,
+  size,
   height = 'clamp(22rem, 54vh, 34rem)',
   placeholder = '{"key": "value"}',
   className,
@@ -46,24 +48,6 @@ export function JsonEditor({
 
   const extensions = useMemo(() => [json(), linter(jsonParseLinter())], [])
 
-  const validation = useMemo(() => {
-    const isEmpty = value.trim() === ''
-    if (isEmpty) {
-      return { valid: true as const, size: 0 }
-    }
-
-    const result = parseJsonSafely(value)
-    if (result.ok) {
-      return { valid: true as const, size: result.size }
-    }
-
-    return {
-      valid: false as const,
-      error: result.error,
-      size: result.size,
-    }
-  }, [value])
-
   const handleChange = useCallback(
     (newValue: string) => {
       onChange?.(newValue)
@@ -72,13 +56,13 @@ export function JsonEditor({
   )
 
   const sizePercentage = useMemo(() => {
-    if (!validation.size) return 0
-    return Math.min((validation.size / MAX_JSON_SIZE) * 100, 100)
-  }, [validation.size])
+    if (!size) return 0
+    return Math.min((size / MAX_JSON_SIZE) * 100, 100)
+  }, [size])
 
   const pathLocations = useMemo(
-    () => (validation.valid ? getJsonPathLocations(value) : []),
-    [validation.valid, value],
+    () => (!error ? getJsonPathLocations(value) : []),
+    [error, value],
   )
 
   useEffect(() => {
@@ -125,7 +109,7 @@ export function JsonEditor({
         className={cn(
           'overflow-hidden rounded-md border border-border bg-card transition-colors',
           'ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-          !validation.valid && value.length > 0 && 'border-destructive/50',
+          error && value.length > 0 && 'border-destructive/50',
         )}
       >
         <CodeMirror
@@ -143,18 +127,36 @@ export function JsonEditor({
             lineNumbers: true,
             foldGutter: true,
             highlightActiveLineGutter: true,
+            highlightSpecialChars: true,
+            history: true,
+            drawSelection: true,
+            dropCursor: true,
+            allowMultipleSelections: false,
+            indentOnInput: true,
+            syntaxHighlighting: true,
             bracketMatching: true,
             closeBrackets: true,
-            autocompletion: true,
+            autocompletion: false,
+            rectangularSelection: false,
+            crosshairCursor: false,
+            highlightActiveLine: true,
+            highlightSelectionMatches: true,
+            closeBracketsKeymap: true,
+            defaultKeymap: true,
+            searchKeymap: true,
+            historyKeymap: true,
+            foldKeymap: true,
+            completionKeymap: false,
+            lintKeymap: true,
           }}
         />
       </div>
 
-      {value.length > 0 && validation.size !== undefined && (
+      {value.length > 0 && size !== undefined && (
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <p className="text-sm text-muted-foreground">
-              {formatBytes(validation.size)} / {formatBytes(MAX_JSON_SIZE)}
+              {formatBytes(size)} / {formatBytes(MAX_JSON_SIZE)}
             </p>
             <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
               <div
@@ -171,19 +173,16 @@ export function JsonEditor({
             </div>
           </div>
 
-          {validation.valid ? (
+          {!error ? (
             <span className="flex items-center gap-1 text-xs text-success">
               <Check className="h-3.5 w-3.5" />
               Valid JSON
             </span>
           ) : (
-            'error' in validation &&
-            validation.error && (
-              <span className="flex items-center gap-1 text-xs text-destructive">
-                <X className="h-3.5 w-3.5" />
-                {validation.error}
-              </span>
-            )
+            <span className="flex items-center gap-1 text-xs text-destructive">
+              <X className="h-3.5 w-3.5" />
+              {error}
+            </span>
           )}
         </div>
       )}
