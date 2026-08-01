@@ -2,9 +2,22 @@ import { MoreHorizontal } from 'lucide-react'
 import type { DocumentEditorActionsProps } from './JsonEditorPanel.types'
 import { Button } from '@/components/ui/button'
 import { CopyButton } from '@/components/CopyButton'
-import { CopySnippet } from '@/components/CopySnippet'
+import { CopySnippet, CopySnippetMenuItems } from '@/components/CopySnippet'
 import { cn } from '@/lib/utils'
-import { DocumentExportMenu } from '@/components/DocumentExportMenu'
+import {
+  DocumentExportMenu,
+  DocumentExportMenuItems,
+} from '@/components/DocumentExportMenu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 function SecondaryActions({
   commands,
@@ -105,15 +118,64 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
           <div className="hidden flex-wrap items-center gap-2 md:flex">
             <SecondaryActions commands={commands} model={model} mode={mode} />
           </div>
-          <details className="group relative md:hidden">
-            <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-md border bg-background shadow-xs hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
-              <MoreHorizontal className="size-4" />
-              <span className="sr-only">More specimen actions</span>
-            </summary>
-            <div className="absolute right-0 bottom-11 z-50 flex min-w-56 flex-col items-stretch gap-1 rounded-md border bg-popover p-2 text-popover-foreground shadow-md [&>*]:w-full [&>*]:justify-start">
-              <SecondaryActions commands={commands} model={model} mode={mode} />
-            </div>
-          </details>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="md:hidden"
+                aria-label="More specimen actions"
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" className="min-w-56">
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full justify-start"
+                    disabled={model.submission.status === 'saving'}
+                    onClick={commands.reset}
+                  >
+                    Reset
+                  </Button>
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger
+                    disabled={model.exports.status === 'unavailable'}
+                  >
+                    Export
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="min-w-52">
+                    <DocumentExportMenuItems
+                      state={model.exports}
+                      generateTypeScript={commands.generateTypeScript}
+                    />
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                {!isCreate && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <CopyButton
+                        text={model.payload.value}
+                        label="JSON"
+                        ariaLabel="Copy saved JSON"
+                        variant="ghost"
+                        className="w-full justify-start"
+                      />
+                    </DropdownMenuItem>
+                    <CopySnippetMenuItems
+                      pageUrl={mode.documentUrl}
+                      apiUrl={mode.apiUrl}
+                    />
+                  </>
+                )}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       {model.submission.status === 'failed' && (

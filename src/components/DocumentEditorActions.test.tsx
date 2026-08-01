@@ -46,6 +46,8 @@ describe('DocumentEditorActions', () => {
       'Fix invalid JSON before saving.',
     )
     expect(screen.getByText('Fix invalid JSON before saving.')).toBeVisible()
-    expect(screen.getByText('More specimen actions')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'More specimen actions' }),
+    ).toBeInTheDocument()
   })
 })

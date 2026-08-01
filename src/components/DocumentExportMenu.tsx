@@ -2,6 +2,13 @@ import { Download, FileCode2 } from 'lucide-react'
 import type { ExportViewState } from '@/lib/document-editor-model'
 import { Button } from '@/components/ui/button'
 import { CopyButton } from '@/components/CopyButton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type DocumentExportMenuProps = {
   state: ExportViewState
@@ -17,7 +24,7 @@ function downloadText(filename: string, contents: string, type: string) {
   URL.revokeObjectURL(url)
 }
 
-export function DocumentExportMenu({
+export function DocumentExportMenuItems({
   state,
   generateTypeScript,
 }: DocumentExportMenuProps) {
@@ -37,83 +44,78 @@ export function DocumentExportMenu({
   }
 
   return (
-    <details className="group relative">
-      <summary
-        aria-disabled={disabled || generating}
-        onClick={(event) => {
-          if (disabled || generating) event.preventDefault()
-        }}
-        onKeyDown={(event) => {
-          if (
-            (disabled || generating) &&
-            (event.key === 'Enter' || event.key === ' ')
-          ) {
-            event.preventDefault()
-          }
-        }}
-        className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent group-open:bg-accent aria-disabled:pointer-events-none aria-disabled:opacity-50"
-      >
-        <FileCode2 className="size-4" />
-        {generating ? 'Generating…' : 'Export'}
-      </summary>
-      <div className="absolute bottom-11 right-0 z-50 grid min-w-52 gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-        {jsonSchema && (
+    <DropdownMenuGroup>
+      {jsonSchema && (
+        <DropdownMenuItem asChild>
           <CopyButton
             text={jsonSchema}
             label="Copy JSON Schema"
             ariaLabel="Copy JSON Schema"
             variant="ghost"
             size="sm"
-            className="justify-start"
+            className="w-full justify-start"
             disabled={disabled}
           />
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          disabled={disabled}
-          onClick={() =>
-            jsonSchema &&
-            downloadText(
-              'specimen.schema.json',
-              jsonSchema,
-              'application/schema+json',
-            )
-          }
-        >
-          <Download /> Download JSON Schema
-        </Button>
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuItem
+        disabled={disabled}
+        onSelect={() =>
+          jsonSchema &&
+          downloadText(
+            'specimen.schema.json',
+            jsonSchema,
+            'application/schema+json',
+          )
+        }
+      >
+        <Download /> Download JSON Schema
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
         <CopyButton
           getText={generateTypeScript}
           label="Copy TypeScript"
           ariaLabel="Copy TypeScript"
           variant="ghost"
           size="sm"
-          className="justify-start"
+          className="w-full justify-start"
           disabled={disabled || generating}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          disabled={disabled || generating}
-          onClick={() =>
-            withTypeScript((source) =>
-              downloadText('specimen.types.ts', source, 'text/typescript'),
-            )
-          }
-        >
-          <Download /> Download TypeScript
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={disabled || generating}
+        onSelect={() =>
+          void withTypeScript((source) =>
+            downloadText('specimen.types.ts', source, 'text/typescript'),
+          )
+        }
+      >
+        <Download /> Download TypeScript
+      </DropdownMenuItem>
+      {state.status === 'failed' && (
+        <p role="alert" className="px-2 py-1 text-xs text-destructive">
+          {state.message}
+        </p>
+      )}
+    </DropdownMenuGroup>
+  )
+}
+
+export function DocumentExportMenu(props: DocumentExportMenuProps) {
+  const disabled = props.state.status === 'unavailable'
+  const generating = props.state.status === 'generating'
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled}>
+          <FileCode2 />
+          {generating ? 'Generating…' : 'Export'}
         </Button>
-        {state.status === 'failed' && (
-          <p role="alert" className="px-2 py-1 text-xs text-destructive">
-            {state.message}
-          </p>
-        )}
-      </div>
-    </details>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="end" className="min-w-52">
+        <DocumentExportMenuItems {...props} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

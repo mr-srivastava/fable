@@ -74,7 +74,7 @@ describe('ExamplesTabs', () => {
     )
     expect(
       screen.getByRole('menuitem', { name: 'Delete “Success”' }),
-    ).toBeDisabled()
+    ).toHaveAttribute('aria-disabled', 'true')
     expect(
       screen.getByText('A specimen needs at least one example.'),
     ).toBeInTheDocument()

@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { JsonDocumentExample } from '@shared/document'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
 
 type ExamplesTabsProps = {
   examples: Array<JsonDocumentExample>
@@ -35,7 +41,6 @@ export function ExamplesTabs({
   const [renaming, setRenaming] = useState(false)
   const [draftName, setDraftName] = useState(activeExample.name)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
-  const actionsRef = useRef<HTMLDetailsElement>(null)
   const cancelRenameRef = useRef(false)
 
   useEffect(() => {
@@ -110,59 +115,45 @@ export function ExamplesTabs({
                 </TabsTrigger>
 
                 {isActive && (
-                  <details
-                    ref={actionsRef}
-                    className="group absolute right-1 z-20"
-                  >
-                    <summary
-                      role="button"
-                      aria-label={`Actions for ${example.name}`}
-                      className={cn(
-                        buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                        'cursor-pointer list-none',
-                      )}
-                    >
-                      <MoreHorizontal />
-                    </summary>
-                    <div
-                      role="menu"
-                      className="absolute top-8 right-0 z-50 min-w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-                    >
-                      <button
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
                         type="button"
-                        role="menuitem"
-                        className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                        onClick={() => {
-                          if (actionsRef.current)
-                            actionsRef.current.open = false
-                          setDraftName(example.name)
-                          setRenaming(true)
-                        }}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="absolute right-1"
+                        aria-label={`Actions for ${example.name}`}
                       >
-                        <Pencil className="size-4" />
-                        Rename “{example.name}”
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={examples.length === 1}
-                        className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive outline-none select-none hover:bg-destructive/10 focus:bg-destructive/10 disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => {
-                          if (actionsRef.current)
-                            actionsRef.current.open = false
-                          onDelete(example.id)
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                        Delete “{example.name}”
-                      </button>
-                      {examples.length === 1 && (
-                        <p className="max-w-48 px-2 py-1.5 text-xs text-muted-foreground">
-                          A specimen needs at least one example.
-                        </p>
-                      )}
-                    </div>
-                  </details>
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-48">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setDraftName(example.name)
+                            requestAnimationFrame(() => setRenaming(true))
+                          }}
+                        >
+                          <Pencil />
+                          Rename “{example.name}”
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={examples.length === 1}
+                          onSelect={() => onDelete(example.id)}
+                        >
+                          <Trash2 />
+                          Delete “{example.name}”
+                        </DropdownMenuItem>
+                        {examples.length === 1 && (
+                          <p className="max-w-48 px-2 py-1.5 text-xs text-muted-foreground">
+                            A specimen needs at least one example.
+                          </p>
+                        )}
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             )
