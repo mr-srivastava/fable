@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { validateJSON } from '@/lib/validators'
+import { parseJsonSafely } from '@/lib/json'
 
 export function useValidatedDocumentSubmit(
   getJson: () => string,
@@ -11,9 +11,9 @@ export function useValidatedDocumentSubmit(
   const handleSubmit = useCallback(async () => {
     setError(null)
     const json = getJson()
-    const validation = validateJSON(json)
-    if (!validation.valid) {
-      setError(validation.error ?? 'Invalid JSON')
+    const result = parseJsonSafely(json)
+    if (!result.ok) {
+      setError(result.error)
       return
     }
     try {

@@ -1,5 +1,5 @@
 import { ContractFieldReferenceItem } from './ContractFieldRow'
-import type { JsonContract, JsonContractField } from '@/lib/schemas'
+import type { JsonContract, JsonContractField } from '@shared/document'
 import { Accordion } from '@/components/ui/accordion'
 import {
   Empty,

@@ -5,7 +5,7 @@ import {
   documentExampleSchema,
   jsonContractSchema,
   parseDocumentId,
-} from '@/lib/schemas'
+} from '@shared/document'
 
 const validExample = {
   id: 'example-1',
@@ -59,6 +59,12 @@ describe('shared schemas', () => {
     expect(() => assertValidDocumentExamples([])).toThrow(
       'At least one example is required',
     )
+  })
+
+  it('rejects duplicate example IDs', () => {
+    expect(() =>
+      assertValidDocumentExamples([validExample, validExample]),
+    ).toThrow('Example IDs must be unique')
   })
 })
 

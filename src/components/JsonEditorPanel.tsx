@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
 import type {
   JsonEditorGridProps,
@@ -18,7 +18,6 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { validateJSON } from '@/lib/validators'
 import { cn } from '@/lib/utils'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
@@ -122,15 +121,17 @@ function PayloadStatusBadge({
 function ContractDiagnosticsNotice({
   contractDiagnostics,
   examples,
-}: Pick<JsonEditorPanelProps, 'contractDiagnostics' | 'examples'>) {
+}: {
+  contractDiagnostics?: JsonEditorPanelProps['contract']['diagnostics']
+  examples: JsonEditorPanelProps['examples']['items']
+}) {
   const [dismissed, setDismissed] = useState(false)
   const [showGroups, setShowGroups] = useState(false)
 
   if (
     dismissed ||
     !contractDiagnostics ||
-    contractDiagnostics.severity !== 'warning' ||
-    !examples
+    contractDiagnostics.severity !== 'warning'
   ) {
     return null
   }
@@ -202,22 +203,14 @@ function PayloadPanel({
   hasUnsavedChanges,
 }: JsonEditorGridProps & {
   status: PayloadStatus
-  examples?: JsonEditorPanelProps['examples']
-  activeExampleId?: string
-  onSelectExample?: (id: string) => void
-  onRenameExample?: (id: string, name: string) => void
-  onAddExample?: () => void
-  onDeleteExample?: (id: string) => void
+  examples: JsonEditorPanelProps['examples']['items']
+  activeExampleId: string
+  onSelectExample: (id: string) => void
+  onRenameExample: (id: string, name: string) => void
+  onAddExample: () => void
+  onDeleteExample: (id: string) => void
   hasUnsavedChanges?: boolean
 }) {
-  const showExamples =
-    examples &&
-    activeExampleId &&
-    onSelectExample &&
-    onRenameExample &&
-    onAddExample &&
-    onDeleteExample
-
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-end justify-between gap-3">
@@ -234,16 +227,14 @@ function PayloadPanel({
           hasUnsavedChanges={hasUnsavedChanges}
         />
       </div>
-      {showExamples && (
-        <ExamplesTabs
-          examples={examples}
-          activeExampleId={activeExampleId}
-          onSelect={onSelectExample}
-          onRename={onRenameExample}
-          onAdd={onAddExample}
-          onDelete={onDeleteExample}
-        />
-      )}
+      <ExamplesTabs
+        examples={examples}
+        activeExampleId={activeExampleId}
+        onSelect={onSelectExample}
+        onRename={onRenameExample}
+        onAdd={onAddExample}
+        onDelete={onDeleteExample}
+      />
       <Tabs defaultValue="editor" className="gap-3">
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
@@ -294,42 +285,19 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     value,
     onChange,
     error,
-    onSubmit,
-    onReset,
+    actions,
     description: descriptionProp,
     title,
     mode,
-    contract,
-    onContractChange,
-    contractDisabled,
-    contractDiagnostics,
     examples,
-    activeExampleId,
-    onSelectExample,
-    onRenameExample,
-    onAddExample,
-    onDeleteExample,
+    contract,
+    validation,
     hasUnsavedChanges,
   } = props
 
   const isCreate = mode === 'create'
   const description =
     descriptionProp ?? (isCreate ? CREATE_DEFAULTS.description : undefined)
-
-  const submitDisabled = useMemo(() => {
-    const trimmed = value.trim()
-    if (!trimmed) return true
-    if (examples?.some((example) => !validateJSON(example.data).valid)) {
-      return true
-    }
-    return !validateJSON(value).valid
-  }, [examples, value])
-
-  const payloadStatus: PayloadStatus = useMemo(() => {
-    const trimmed = value.trim()
-    if (!trimmed) return 'waiting'
-    return validateJSON(value).valid ? 'valid' : 'invalid'
-  }, [value])
 
   return (
     <>
@@ -355,13 +323,13 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               value={value}
               onChange={onChange}
               error={error}
-              status={payloadStatus}
-              examples={examples}
-              activeExampleId={activeExampleId}
-              onSelectExample={onSelectExample}
-              onRenameExample={onRenameExample}
-              onAddExample={onAddExample}
-              onDeleteExample={onDeleteExample}
+              status={validation.payloadStatus}
+              examples={examples.items}
+              activeExampleId={examples.activeId}
+              onSelectExample={examples.select}
+              onRenameExample={examples.rename}
+              onAddExample={examples.add}
+              onDeleteExample={examples.remove}
               hasUnsavedChanges={hasUnsavedChanges}
             />
           </TabsContent>
@@ -370,13 +338,13 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           </TabsContent>
           <TabsContent value="contract">
             <ContractDiagnosticsNotice
-              contractDiagnostics={contractDiagnostics}
-              examples={examples}
+              contractDiagnostics={contract.diagnostics}
+              examples={examples.items}
             />
             <ContractPanel
-              contract={contract}
-              disabled={contractDisabled}
-              onChange={onContractChange}
+              contract={contract.value}
+              disabled={contract.disabled}
+              onChange={contract.change}
             />
           </TabsContent>
         </Tabs>
@@ -390,13 +358,13 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               value={value}
               onChange={onChange}
               error={error}
-              status={payloadStatus}
-              examples={examples}
-              activeExampleId={activeExampleId}
-              onSelectExample={onSelectExample}
-              onRenameExample={onRenameExample}
-              onAddExample={onAddExample}
-              onDeleteExample={onDeleteExample}
+              status={validation.payloadStatus}
+              examples={examples.items}
+              activeExampleId={examples.activeId}
+              onSelectExample={examples.select}
+              onRenameExample={examples.rename}
+              onAddExample={examples.add}
+              onDeleteExample={examples.remove}
               hasUnsavedChanges={hasUnsavedChanges}
             />
           </ResizablePanel>
@@ -404,22 +372,22 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           <ResizablePanel defaultSize={44} minSize={32}>
             <div className="flex flex-col gap-3">
               <ContractDiagnosticsNotice
-                contractDiagnostics={contractDiagnostics}
-                examples={examples}
+                contractDiagnostics={contract.diagnostics}
+                examples={examples.items}
               />
               <ContractPanel
-                contract={contract}
-                disabled={contractDisabled}
-                onChange={onContractChange}
+                contract={contract.value}
+                disabled={contract.disabled}
+                onChange={contract.change}
               />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </section>
       <DocumentEditorActions
-        onSubmit={onSubmit}
-        onReset={onReset}
-        disabled={submitDisabled}
+        onSubmit={actions.submit}
+        onReset={actions.reset}
+        disabled={!validation.canSubmit}
         {...(mode === 'view'
           ? {
               mode: 'view',

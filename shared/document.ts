@@ -1,7 +1,6 @@
 import * as schema from 'valibot'
-import type { Id } from '../../convex/_generated/dataModel'
 
-export const jsonFieldTypeSchema = schema.picklist([
+export const JSON_FIELD_TYPES = [
   'string',
   'number',
   'boolean',
@@ -9,7 +8,9 @@ export const jsonFieldTypeSchema = schema.picklist([
   'array',
   'object',
   'unknown',
-])
+] as const
+
+export const jsonFieldTypeSchema = schema.picklist(JSON_FIELD_TYPES)
 
 export const jsonContractFieldSchema = schema.object({
   path: schema.string(),
@@ -40,6 +41,11 @@ export const documentMetadataSchema = schema.object({
 export const documentExamplesSchema = schema.pipe(
   schema.array(documentExampleSchema),
   schema.minLength(1, 'At least one example is required'),
+  schema.check(
+    (examples) =>
+      new Set(examples.map((example) => example.id)).size === examples.length,
+    'Example IDs must be unique',
+  ),
 )
 
 const DOCUMENT_ID_PATTERN = /^[a-z0-9_]+$/i
@@ -65,10 +71,10 @@ export type JsonDocumentMetadata = schema.InferOutput<
   typeof documentMetadataSchema
 >
 
-export function parseDocumentId(raw: string): Id<'documents'> | null {
-  return schema.safeParse(documentIdSchema, raw).success
-    ? (raw as Id<'documents'>)
-    : null
+export function parseDocumentId<T extends string = string>(
+  raw: string,
+): T | null {
+  return schema.safeParse(documentIdSchema, raw).success ? (raw as T) : null
 }
 
 export function assertValidDocumentExamples(examples: unknown) {
@@ -77,4 +83,8 @@ export function assertValidDocumentExamples(examples: unknown) {
 
 export function assertValidDocumentContract(contract: unknown) {
   schema.parse(jsonContractSchema, contract)
+}
+
+export function parseJsonContract(contract: unknown): JsonContract {
+  return schema.parse(jsonContractSchema, contract)
 }

@@ -1,13 +1,18 @@
 import parseJson from 'json-parse-even-better-errors'
+import { MAX_EXAMPLE_BYTES, getUtf8Size } from '@shared/document-limits'
 
-export const MAX_JSON_SIZE = 102400 // 100KB in bytes
+export const MAX_JSON_SIZE = MAX_EXAMPLE_BYTES
 
 export type ParseJsonResult =
   | { ok: true; value: unknown; size: number }
   | { ok: false; error: string; size?: number }
 
 export function getJsonSize(input: string): number {
-  return new Blob([input]).size
+  return getUtf8Size(input)
+}
+
+export function formatBytes(bytes: number): string {
+  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(2)} KB`
 }
 
 export function validateJsonSize(

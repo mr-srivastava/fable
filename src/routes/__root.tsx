@@ -15,8 +15,8 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import appCss from '../styles.css?url'
 import { getThemeInitScript } from '../hooks/use-theme'
-
 import type { QueryClient } from '@tanstack/react-query'
+import { publicConfig } from '@/config/runtime'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -72,21 +72,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <ConvexProvider>
             <Header />
             {children}
-            {import.meta.env.DEV &&
-              import.meta.env.VITE_SHOW_DEVTOOLS === 'true' && (
-                <TanStackDevtools
-                  config={{
-                    position: 'bottom-right',
-                  }}
-                  plugins={[
-                    {
-                      name: 'Tanstack Router',
-                      render: <TanStackRouterDevtoolsPanel />,
-                    },
-                    TanStackQueryDevtools,
-                  ]}
-                />
-              )}
+            {import.meta.env.DEV && publicConfig.showDevtools && (
+              <TanStackDevtools
+                config={{
+                  position: 'bottom-right',
+                }}
+                plugins={[
+                  {
+                    name: 'Tanstack Router',
+                    render: <TanStackRouterDevtoolsPanel />,
+                  },
+                  TanStackQueryDevtools,
+                ]}
+              />
+            )}
           </ConvexProvider>
         </ThemeProvider>
         <Scripts />

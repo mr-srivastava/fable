@@ -5,7 +5,7 @@ import { linter } from '@codemirror/lint'
 import { AlertCircle, AlertTriangle, Check, FileText, X } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
 import { getFableCodeMirrorTheme } from '@/lib/codemirror-fable-theme'
-import { MAX_BLOB_SIZE, formatBytes, parseJSONInput } from '@/lib/validators'
+import { MAX_JSON_SIZE, formatBytes, parseJsonSafely } from '@/lib/json'
 import { cn } from '@/lib/utils'
 
 interface JsonEditorProps {
@@ -43,11 +43,11 @@ export function JsonEditor({
       }
     }
 
-    const result = parseJSONInput(value)
+    const result = parseJsonSafely(value)
     if (result.ok) {
       return {
         validation: { valid: true as const, size: result.size },
-        formatted: JSON.stringify(result.parsed, null, 2),
+        formatted: JSON.stringify(result.value, null, 2),
         parseError: null as string | null,
       }
     }
@@ -72,7 +72,7 @@ export function JsonEditor({
 
   const sizePercentage = useMemo(() => {
     if (!validation.size) return 0
-    return Math.min((validation.size / MAX_BLOB_SIZE) * 100, 100)
+    return Math.min((validation.size / MAX_JSON_SIZE) * 100, 100)
   }, [validation.size])
 
   if (mode === 'edit') {
@@ -107,7 +107,7 @@ export function JsonEditor({
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
-                {formatBytes(validation.size)} / {formatBytes(MAX_BLOB_SIZE)}
+                {formatBytes(validation.size)} / {formatBytes(MAX_JSON_SIZE)}
               </p>
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
                 <div
