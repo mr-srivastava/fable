@@ -41,6 +41,9 @@ and derives the flattened compatibility contract used by the inspector.
 export as parallel XState regions. It invokes Quicktype, TypeScript generation,
 and route-provided persistence as actors. Editing events call the pure draft
 transitions instead of duplicating domain behavior in machine assignments.
+An in-flight save retains the snapshot it submitted, so later edits remain
+dirty after the save finishes. An edit that cancels TypeScript generation
+settles the export command with an explicit cancellation error.
 
 `src/hooks/use-document-editor.ts` owns the machine actor and browser worker
 lifecycle. It exposes a `model` and `commands` interface defined by
@@ -108,15 +111,18 @@ tied to the Convex runtime. The schema and functions reuse those validators.
 
 Callers submit `examples`, the effective `jsonSchema`, authored
 `contractOverrides`, and the flattened compatibility `contract`. The
-persistence module revalidates them and derives these stored projections:
+persistence module revalidates the inputs, reapplies surviving overrides,
+normalizes the effective schema, and derives these stored projections:
 
 - `data` contains the first example for legacy readers.
+- `contract` contains the flattened view derived from the effective schema.
 - `size` contains the first example's UTF-8 byte size.
 - `totalSize` contains the serialized document payload size.
 - `metadata.version` identifies the stored representation.
 
-The projections are implementation details. Callers must not provide or
-synchronize them.
+The persistence module rejects override pointers that don't resolve against
+the schema. Derived projections are implementation details; callers don't
+synchronize them independently.
 
 Version 2 records store JSON Schema as the canonical contract. The flattened
 contract remains an additive compatibility projection during migration.

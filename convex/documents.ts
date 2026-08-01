@@ -17,7 +17,7 @@ export const create = mutation({
   },
   returns: v.id('documents'),
   handler: async (ctx, args) => {
-    const { data, size, totalSize } = prepareDocumentRecord(
+    const prepared = prepareDocumentRecord(
       args.examples,
       args.contract,
       args.jsonSchema,
@@ -25,15 +25,15 @@ export const create = mutation({
     )
 
     return ctx.db.insert('documents', {
-      data,
+      data: prepared.data,
       examples: args.examples,
-      size,
-      totalSize,
+      size: prepared.size,
+      totalSize: prepared.totalSize,
       updatedAt: Date.now(),
-      metadata: { version: args.jsonSchema ? 2 : 1 },
-      contract: args.contract,
-      jsonSchema: args.jsonSchema,
-      contractOverrides: args.contractOverrides,
+      metadata: { version: prepared.jsonSchema ? 2 : 1 },
+      contract: prepared.contract,
+      jsonSchema: prepared.jsonSchema,
+      contractOverrides: prepared.contractOverrides,
     })
   },
 })
@@ -56,7 +56,7 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { data, size, totalSize } = prepareDocumentRecord(
+    const prepared = prepareDocumentRecord(
       args.examples,
       args.contract,
       args.jsonSchema,
@@ -64,15 +64,15 @@ export const update = mutation({
     )
 
     await ctx.db.patch(args.id, {
-      data,
+      data: prepared.data,
       examples: args.examples,
-      size,
-      totalSize,
+      size: prepared.size,
+      totalSize: prepared.totalSize,
       updatedAt: Date.now(),
-      metadata: { version: args.jsonSchema ? 2 : 1 },
-      contract: args.contract,
-      jsonSchema: args.jsonSchema,
-      contractOverrides: args.contractOverrides,
+      metadata: { version: prepared.jsonSchema ? 2 : 1 },
+      contract: prepared.contract,
+      jsonSchema: prepared.jsonSchema,
+      contractOverrides: prepared.contractOverrides,
     })
     return null
   },

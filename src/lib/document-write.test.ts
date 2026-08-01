@@ -73,9 +73,53 @@ describe('prepareDocumentRecord', () => {
     const enriched = prepareDocumentRecord(
       [example('one')],
       undefined,
-      { type: 'object' },
+      { type: 'object', properties: { id: { type: 'string' } } },
       [{ pointer: '/id', description: 'Identifier' }],
     )
     expect(enriched.totalSize).toBeGreaterThan(base.totalSize)
+  })
+
+  it('persists a normalized effective schema and derived projection', () => {
+    const result = prepareDocumentRecord(
+      [example('one', '{"id":"one"}')],
+      { version: 1, fields: [] },
+      {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+      [{ pointer: '/id', description: 'Identifier' }],
+    )
+
+    expect(result.jsonSchema).toMatchObject({
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      properties: { id: { description: 'Identifier' } },
+    })
+    expect(result.contract?.fields).toEqual([
+      expect.objectContaining({
+        path: 'id',
+        schemaPointer: '/id',
+        description: 'Identifier',
+      }),
+    ])
+    expect(result.contractOverrides).toEqual([
+      { pointer: '/id', description: 'Identifier' },
+    ])
+  })
+
+  it('rejects overrides whose schema target does not exist', () => {
+    expect(() =>
+      prepareDocumentRecord([example('one')], undefined, { type: 'object' }, [
+        { pointer: '/missing', required: true },
+      ]),
+    ).toThrow('Contract override target does not exist')
+  })
+
+  it('rejects overrides without a JSON Schema', () => {
+    expect(() =>
+      prepareDocumentRecord([example('one')], undefined, undefined, [
+        { pointer: '/id', required: true },
+      ]),
+    ).toThrow('Contract overrides require a JSON Schema')
   })
 })

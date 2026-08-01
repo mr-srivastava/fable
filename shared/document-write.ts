@@ -10,7 +10,9 @@ import {
   getUtf8Size,
 } from './document-limits'
 import {
+  applyContractOverrides,
   normalizeJsonSchema,
+  projectJsonSchemaToContract,
   validateExamplesAgainstSchema,
 } from './json-schema'
 import type {
@@ -24,6 +26,9 @@ export type PreparedDocumentRecord = {
   data: string
   size: number
   totalSize: number
+  contract?: JsonContract
+  jsonSchema?: JsonSchema
+  contractOverrides?: ContractOverrides
 }
 
 function validateExampleData(data: string): number {
@@ -55,18 +60,37 @@ export function prepareDocumentRecord(
 
   for (const example of examples) validateExampleData(example.data)
   if (contract) assertValidDocumentContract(contract)
-  parseContractOverrides(contractOverrides)
+  const parsedOverrides = parseContractOverrides(contractOverrides)
+  let effectiveContract = contract
+  let effectiveJsonSchema: JsonSchema | undefined
+  let effectiveOverrides: ContractOverrides | undefined
   if (jsonSchema) {
     const normalizedSchema = normalizeJsonSchema(jsonSchema)
-    if (validateExamplesAgainstSchema(examples, normalizedSchema).length > 0) {
+    const applied = applyContractOverrides(normalizedSchema, parsedOverrides)
+    if (applied.overrides.length !== parsedOverrides.length) {
+      throw new Error('Contract override target does not exist')
+    }
+    effectiveJsonSchema = normalizeJsonSchema(applied.jsonSchema)
+    effectiveOverrides = applied.overrides
+    effectiveContract = projectJsonSchemaToContract(effectiveJsonSchema)
+    if (
+      validateExamplesAgainstSchema(examples, effectiveJsonSchema).length > 0
+    ) {
       throw new Error('All examples must satisfy the contract')
     }
+  } else if (parsedOverrides.length > 0) {
+    throw new Error('Contract overrides require a JSON Schema')
   }
 
   const data = examples[0].data
   const size = getUtf8Size(data)
   const totalSize = getUtf8Size(
-    JSON.stringify({ examples, contract, jsonSchema, contractOverrides }),
+    JSON.stringify({
+      examples,
+      contract: effectiveContract,
+      jsonSchema: effectiveJsonSchema,
+      contractOverrides: effectiveOverrides,
+    }),
   )
   if (totalSize > MAX_DOCUMENT_BYTES) {
     throw new Error(
@@ -74,5 +98,12 @@ export function prepareDocumentRecord(
     )
   }
 
-  return { data, size, totalSize }
+  return {
+    data,
+    size,
+    totalSize,
+    contract: effectiveContract,
+    jsonSchema: effectiveJsonSchema,
+    contractOverrides: effectiveOverrides,
+  }
 }

@@ -1,6 +1,7 @@
 import { Download, FileCode2 } from 'lucide-react'
 import type { ExportViewState } from '@/lib/document-editor-model'
 import { Button } from '@/components/ui/button'
+import { CopyButton } from '@/components/CopyButton'
 
 type DocumentExportMenuProps = {
   state: ExportViewState
@@ -56,21 +57,17 @@ export function DocumentExportMenu({
         {generating ? 'Generating…' : 'Export'}
       </summary>
       <div className="absolute bottom-11 right-0 z-50 grid min-w-52 gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          disabled={disabled}
-          onClick={() =>
-            jsonSchema &&
-            void navigator.clipboard
-              .writeText(jsonSchema)
-              .catch(() => undefined)
-          }
-        >
-          Copy JSON Schema
-        </Button>
+        {jsonSchema && (
+          <CopyButton
+            text={jsonSchema}
+            label="Copy JSON Schema"
+            ariaLabel="Copy JSON Schema"
+            variant="ghost"
+            size="sm"
+            className="justify-start"
+            disabled={disabled}
+          />
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -88,18 +85,15 @@ export function DocumentExportMenu({
         >
           <Download /> Download JSON Schema
         </Button>
-        <Button
-          type="button"
+        <CopyButton
+          getText={generateTypeScript}
+          label="Copy TypeScript"
+          ariaLabel="Copy TypeScript"
           variant="ghost"
           size="sm"
           className="justify-start"
           disabled={disabled || generating}
-          onClick={() =>
-            withTypeScript((source) => navigator.clipboard.writeText(source))
-          }
-        >
-          Copy TypeScript
-        </Button>
+        />
         <Button
           type="button"
           variant="ghost"

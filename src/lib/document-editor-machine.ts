@@ -8,6 +8,7 @@ import type {
 import {
   addDraftExample,
   applyDraftInference,
+  documentExamplesAreValid,
   getDocumentDraftSnapshot,
   prepareDocumentWrite,
   removeDraftExample,
@@ -17,7 +18,6 @@ import {
   updateDraftExample,
 } from '@/lib/document-draft'
 import { createDocumentExample } from '@/lib/document-examples'
-import { parseJsonSafely } from '@/lib/json'
 
 export type DocumentPersistenceResult =
   | { type: 'created'; documentId: string }
@@ -68,13 +68,9 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
 }
 
-function examplesAreValid(draft: DocumentDraft) {
-  return draft.examples.every((example) => parseJsonSafely(example.data).ok)
-}
-
 function canUseEffectiveSchema(draft: DocumentDraft) {
   return (
-    examplesAreValid(draft) &&
+    documentExamplesAreValid(draft.examples) &&
     Boolean(draft.jsonSchema) &&
     Boolean(draft.contract) &&
     draft.schemaDiagnostics.length === 0
@@ -96,12 +92,21 @@ const inferenceEvents = {
   },
 } as const
 
-const invalidatingEvents = {
-  'example.jsonChanged': { target: '.idle', actions: 'clearExport' },
-  'example.added': { target: '.idle', actions: 'clearExport' },
-  'example.removed': { target: '.idle', actions: 'clearExport' },
-  'contract.overrideChanged': { target: '.idle', actions: 'clearExport' },
-  'document.reset': { target: '.idle', actions: 'clearExport' },
+const persistenceInvalidationEvents = {
+  'example.jsonChanged': { target: 'idle', actions: 'clearPersistence' },
+  'example.renamed': { target: 'idle', actions: 'clearPersistence' },
+  'example.added': { target: 'idle', actions: 'clearPersistence' },
+  'example.removed': { target: 'idle', actions: 'clearPersistence' },
+  'contract.overrideChanged': { target: 'idle', actions: 'clearPersistence' },
+  'document.reset': { target: 'idle', actions: 'clearPersistence' },
+} as const
+
+const exportInvalidationEvents = {
+  'example.jsonChanged': { target: 'idle', actions: 'clearExport' },
+  'example.added': { target: 'idle', actions: 'clearExport' },
+  'example.removed': { target: 'idle', actions: 'clearExport' },
+  'contract.overrideChanged': { target: 'idle', actions: 'clearExport' },
+  'document.reset': { target: 'idle', actions: 'clearExport' },
 } as const
 
 export const documentEditorMachine = setup({
@@ -143,11 +148,21 @@ export const documentEditorMachine = setup({
           draft: DocumentDraft
           persist: DocumentEditorDependencies['persistDocument']
         }
-      }) => input.persist(prepareDocumentWrite(input.draft)),
+      }) => {
+        const snapshot = getDocumentDraftSnapshot(input.draft)
+        return input
+          .persist(prepareDocumentWrite(input.draft))
+          .then((result) => ({
+            draft: input.draft,
+            result,
+            snapshot,
+          }))
+      },
     ),
   },
   guards: {
-    examplesAreInvalid: ({ context }) => !examplesAreValid(context.draft),
+    examplesAreInvalid: ({ context }) =>
+      !documentExamplesAreValid(context.draft.examples),
     inferenceFailed: ({ context }) => Boolean(context.analysisError),
     hasSchemaViolations: ({ context }) =>
       context.draft.schemaDiagnostics.length > 0,
@@ -220,6 +235,10 @@ export const documentEditorMachine = setup({
     clearExport: assign({
       exportSource: undefined,
       exportError: undefined,
+    }),
+    cancelExport: assign({
+      exportSource: undefined,
+      exportError: 'TypeScript export was cancelled because the draft changed',
     }),
   },
 }).createMachine({
@@ -312,30 +331,12 @@ export const documentEditorMachine = setup({
     persistence: {
       initial: 'idle',
       on: {
-        'example.jsonChanged': {
-          target: '.idle',
-          actions: 'clearPersistence',
-        },
-        'example.renamed': {
-          target: '.idle',
-          actions: 'clearPersistence',
-        },
-        'example.added': {
-          target: '.idle',
-          actions: 'clearPersistence',
-        },
-        'example.removed': {
-          target: '.idle',
-          actions: 'clearPersistence',
-        },
-        'contract.overrideChanged': {
-          target: '.idle',
-          actions: 'clearPersistence',
-        },
-        'document.reset': {
-          target: '.idle',
-          actions: 'clearPersistence',
-        },
+        'example.jsonChanged': { actions: 'clearPersistence' },
+        'example.renamed': { actions: 'clearPersistence' },
+        'example.added': { actions: 'clearPersistence' },
+        'example.removed': { actions: 'clearPersistence' },
+        'contract.overrideChanged': { actions: 'clearPersistence' },
+        'document.reset': { actions: 'clearPersistence' },
       },
       states: {
         idle: {
@@ -354,11 +355,11 @@ export const documentEditorMachine = setup({
               persist: context.dependencies.persistDocument,
             }),
             onDone: {
-              actions: assign(({ context, event }) => ({
-                persistenceResult: event.output,
+              actions: assign(({ event }) => ({
+                persistenceResult: event.output.result,
                 persistenceError: undefined,
-                initialDraft: context.draft,
-                initialSnapshot: getDocumentDraftSnapshot(context.draft),
+                initialDraft: event.output.draft,
+                initialSnapshot: event.output.snapshot,
               })),
               target: 'saved',
             },
@@ -376,6 +377,7 @@ export const documentEditorMachine = setup({
         },
         saved: {
           on: {
+            ...persistenceInvalidationEvents,
             'document.submitRequested': {
               guard: 'canSubmit',
               target: 'saving',
@@ -384,6 +386,7 @@ export const documentEditorMachine = setup({
         },
         failed: {
           on: {
+            ...persistenceInvalidationEvents,
             'document.submitRequested': {
               guard: 'canSubmit',
               target: 'saving',
@@ -394,7 +397,6 @@ export const documentEditorMachine = setup({
     },
     export: {
       initial: 'idle',
-      on: invalidatingEvents,
       states: {
         idle: {
           on: {
@@ -405,6 +407,28 @@ export const documentEditorMachine = setup({
           },
         },
         generating: {
+          on: {
+            'example.jsonChanged': {
+              target: 'failed',
+              actions: 'cancelExport',
+            },
+            'example.added': {
+              target: 'failed',
+              actions: 'cancelExport',
+            },
+            'example.removed': {
+              target: 'failed',
+              actions: 'cancelExport',
+            },
+            'contract.overrideChanged': {
+              target: 'failed',
+              actions: 'cancelExport',
+            },
+            'document.reset': {
+              target: 'failed',
+              actions: 'cancelExport',
+            },
+          },
           invoke: {
             src: 'generateTypeScript',
             input: ({ context }) => ({
@@ -429,11 +453,13 @@ export const documentEditorMachine = setup({
         },
         ready: {
           on: {
+            ...exportInvalidationEvents,
             'export.typescriptRequested': 'generating',
           },
         },
         failed: {
           on: {
+            ...exportInvalidationEvents,
             'export.typescriptRequested': {
               guard: 'canExport',
               target: 'generating',

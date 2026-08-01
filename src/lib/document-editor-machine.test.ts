@@ -3,7 +3,10 @@ import { createActor, waitFor } from 'xstate'
 import { documentEditorMachine } from './document-editor-machine'
 import type { JsonDocumentExample, JsonSchema } from '@shared/document'
 import type { DocumentEditorMachineInput } from './document-editor-machine'
-import { createDocumentDraft } from '@/lib/document-draft'
+import {
+  createDocumentDraft,
+  getDocumentDraftSnapshot,
+} from '@/lib/document-draft'
 
 const schema: JsonSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
@@ -181,6 +184,62 @@ describe('documentEditorMachine', () => {
     expect(actor.getSnapshot().context.initialDraft).toBe(
       actor.getSnapshot().context.draft,
     )
+    actor.stop()
+  })
+
+  it('finishes an in-flight save and keeps later edits dirty', async () => {
+    vi.useFakeTimers()
+    let finishPersistence: (result: { type: 'updated' }) => void = () =>
+      undefined
+    const persistDocument = vi.fn(
+      () =>
+        new Promise<{ type: 'updated' }>((resolve) => {
+          finishPersistence = resolve
+        }),
+    )
+    const { actor } = createEditor({ persistDocument })
+    await advanceToReady(actor)
+
+    actor.send({ type: 'document.submitRequested' })
+    actor.send({
+      type: 'example.jsonChanged',
+      exampleId: 'example-1',
+      json: '{"status":"edited while saving"}',
+    })
+
+    expect(actor.getSnapshot().matches({ persistence: 'saving' })).toBe(true)
+    finishPersistence({ type: 'updated' })
+    await waitFor(actor, (snapshot) =>
+      snapshot.matches({ persistence: 'saved' }),
+    )
+    expect(actor.getSnapshot().context.initialSnapshot).not.toBe(
+      getDocumentDraftSnapshot(actor.getSnapshot().context.draft),
+    )
+    actor.stop()
+  })
+
+  it('settles a cancelled TypeScript export as a failure', async () => {
+    vi.useFakeTimers()
+    let exportSignal: AbortSignal | undefined
+    const generateTypeScript = vi.fn(
+      (_schema: JsonSchema, options: { signal: AbortSignal }) => {
+        exportSignal = options.signal
+        return new Promise<string>(() => undefined)
+      },
+    )
+    const { actor } = createEditor({ generateTypeScript })
+    await advanceToReady(actor)
+
+    actor.send({ type: 'export.typescriptRequested' })
+    actor.send({
+      type: 'example.jsonChanged',
+      exampleId: 'example-1',
+      json: '{"status":"changed"}',
+    })
+
+    expect(actor.getSnapshot().matches({ export: 'failed' })).toBe(true)
+    expect(actor.getSnapshot().context.exportError).toContain('cancelled')
+    expect(exportSignal?.aborted).toBe(true)
     actor.stop()
   })
 

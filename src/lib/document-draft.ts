@@ -41,12 +41,12 @@ export type ContractOverrideChange =
   | { pointer: string; type: 'enumChanged'; enumValues?: Array<string> }
   | { pointer: string; type: 'descriptionChanged'; description?: string }
 
-function examplesAreValid(examples: Array<JsonDocumentExample>) {
+export function documentExamplesAreValid(examples: Array<JsonDocumentExample>) {
   return examples.every((example) => parseJsonSafely(example.data).ok)
 }
 
 function getCompatibilityDiagnostics(examples: Array<JsonDocumentExample>) {
-  return examplesAreValid(examples)
+  return documentExamplesAreValid(examples)
     ? analyzeExamplesForContract(examples).diagnostics
     : undefined
 }
@@ -98,7 +98,7 @@ export function createDocumentDraft(
 ): DocumentDraft {
   if (examples.length === 0) throw new Error('At least one example is required')
 
-  const valid = examplesAreValid(examples)
+  const valid = documentExamplesAreValid(examples)
   if (valid && persistedJsonSchema) {
     const schemaState = buildSchemaState(
       examples,
@@ -339,7 +339,7 @@ export function getDocumentDraftSnapshot(draft: DocumentDraft): string {
 }
 
 export function prepareDocumentWrite(draft: DocumentDraft): DocumentWriteInput {
-  if (!examplesAreValid(draft.examples)) {
+  if (!documentExamplesAreValid(draft.examples)) {
     throw new Error('All examples must contain valid JSON')
   }
   if (!draft.jsonSchema || !draft.contract) {
