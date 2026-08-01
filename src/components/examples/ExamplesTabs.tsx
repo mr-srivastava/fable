@@ -23,6 +23,7 @@ type ExamplesTabsProps = {
   onDelete: (id: string) => void
   validationCounts: Record<string, number>
   canAdd: boolean
+  fillHeight?: boolean
   children: ReactNode
 }
 
@@ -35,6 +36,7 @@ export function ExamplesTabs({
   onDelete,
   validationCounts,
   canAdd,
+  fillHeight = false,
   children,
 }: ExamplesTabsProps) {
   const activeExample =
@@ -65,7 +67,11 @@ export function ExamplesTabs({
   }
 
   return (
-    <Tabs value={activeExampleId} onValueChange={onSelect} className="gap-3">
+    <Tabs
+      value={activeExampleId}
+      onValueChange={onSelect}
+      className={fillHeight ? 'flex min-h-0 flex-1 flex-col gap-3' : 'gap-3'}
+    >
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-medium text-foreground">Examples</h3>
@@ -200,7 +206,12 @@ export function ExamplesTabs({
         </div>
       )}
 
-      <TabsContent value={activeExampleId}>{children}</TabsContent>
+      <TabsContent
+        value={activeExampleId}
+        className={fillHeight ? 'min-h-0 flex-1' : undefined}
+      >
+        {children}
+      </TabsContent>
     </Tabs>
   )
 }

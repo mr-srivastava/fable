@@ -158,7 +158,7 @@ export function JsonEditor({
   )
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex justify-end">
         <TooltipProvider>
           <Tooltip>
@@ -190,7 +190,8 @@ export function JsonEditor({
       </div>
       <div
         className={cn(
-          'overflow-hidden rounded-md border border-border bg-card transition-colors',
+          'min-h-0 overflow-hidden rounded-md border border-border bg-card transition-colors',
+          height === '100%' && 'flex-1',
           'ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
           validation.status !== 'valid' &&
             value.length > 0 &&
@@ -245,7 +246,7 @@ export function JsonEditor({
           <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
             <div
               className={cn(
-                'h-full transition-all duration-300',
+                'h-full transition-[width,background-color] duration-300',
                 sizePercentage < 70
                   ? 'bg-success'
                   : sizePercentage < 90

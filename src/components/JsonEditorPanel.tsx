@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import type {
   JsonEditorGridProps,
@@ -27,6 +27,16 @@ const CREATE_DEFAULTS = {
   description:
     'Paste JSON to infer field metadata, annotate the contract, and share the specimen.',
 } as const
+
+const subscribeToHydration = () => () => undefined
+
+function useHydrated() {
+  return useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  )
+}
 
 function JsonEditorPanelHeader({
   mode,
@@ -182,6 +192,7 @@ function PayloadPanel({
   onDeleteExample,
   validationCounts,
   canAddExample,
+  fillHeight = false,
 }: JsonEditorGridProps & {
   examples: JsonEditorPanelProps['model']['examples']['items']
   activeExampleId: string
@@ -191,9 +202,16 @@ function PayloadPanel({
   onDeleteExample: (id: string) => void
   validationCounts: Record<string, number>
   canAddExample: boolean
+  fillHeight?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className={
+        fillHeight
+          ? 'flex h-full min-h-0 flex-col gap-2'
+          : 'flex flex-col gap-2'
+      }
+    >
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Payload
@@ -211,8 +229,9 @@ function PayloadPanel({
         onDelete={onDeleteExample}
         validationCounts={validationCounts}
         canAdd={canAddExample}
+        fillHeight={fillHeight}
       >
-        <div className="space-y-3">
+        <div className={fillHeight ? 'h-full min-h-0' : 'space-y-3'}>
           <JsonEditor
             value={value}
             onChange={onChange}
@@ -220,6 +239,8 @@ function PayloadPanel({
             size={size}
             assistance={assistance}
             pathCoordination={pathCoordination}
+            height={fillHeight ? '100%' : undefined}
+            className={fillHeight ? 'h-full min-h-0' : undefined}
           />
         </div>
       </ExamplesTabs>
@@ -233,6 +254,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const [activePointer, setActivePointer] = useState<string>()
   const [activePointerPresent, setActivePointerPresent] = useState(true)
   const isDesktop = useMediaQuery('(min-width: 768px)')
+  const hydrated = useHydrated()
   const assistance = useMemo<JsonEditorGridProps['assistance']>(() => {
     if (!contract.value) return { status: 'unavailable' }
     const current = contract.valueFreshness === 'current'
@@ -286,24 +308,32 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
       onDeleteExample={commands.removeExample}
       validationCounts={examples.validationCounts}
       canAddExample={examples.canAdd}
+      fillHeight={isDesktop}
     />
   )
 
   const contractPanel = (
-    <div className="flex flex-col gap-3">
+    <div
+      className={
+        isDesktop ? 'flex h-full min-h-0 flex-col gap-3' : 'flex flex-col gap-3'
+      }
+    >
       <ContractDiagnosticsNotice
         contractDiagnostics={contract.diagnostics}
         examples={examples.items}
       />
-      <ContractPanel
-        contract={contract.value}
-        disabled={contract.status.type === 'invalidJson'}
-        onOverrideChange={commands.changeContractOverride}
-        schemaDiagnostics={contract.schemaDiagnostics}
-        activePointer={activePointer}
-        activePointerPresent={activePointerPresent}
-        onSelectPointer={setActivePointer}
-      />
+      <div className={isDesktop ? 'min-h-0 flex-1' : undefined}>
+        <ContractPanel
+          contract={contract.value}
+          disabled={contract.status.type === 'invalidJson'}
+          onOverrideChange={commands.changeContractOverride}
+          schemaDiagnostics={contract.schemaDiagnostics}
+          activePointer={activePointer}
+          activePointerPresent={activePointerPresent}
+          onSelectPointer={setActivePointer}
+          fillHeight={isDesktop}
+        />
+      </div>
     </div>
   )
 
@@ -317,10 +347,15 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         />
         <SchemaStatusNotice contract={contract} />
 
-        {isDesktop ? (
+        {!hydrated ? (
+          <div
+            className="min-h-[36rem] md:h-[clamp(36rem,calc(100dvh-12rem),46rem)]"
+            aria-hidden="true"
+          />
+        ) : isDesktop ? (
           <ResizablePanelGroup
             orientation="horizontal"
-            className="min-h-[36rem] gap-4"
+            className="h-[clamp(36rem,calc(100dvh-12rem),46rem)] gap-4"
           >
             <ResizablePanel defaultSize={56} minSize={42}>
               {payloadPanel}
