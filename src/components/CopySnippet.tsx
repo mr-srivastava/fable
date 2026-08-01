@@ -1,4 +1,5 @@
 import { CopyButton } from '@/components/CopyButton'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 
 interface CopySnippetProps {
   pageUrl: string
@@ -43,5 +44,25 @@ export function CopySnippet({ pageUrl, apiUrl }: CopySnippetProps) {
         />
       ))}
     </div>
+  )
+}
+
+export function CopySnippetMenuItems({ pageUrl, apiUrl }: CopySnippetProps) {
+  return (
+    <>
+      {(['url', 'curl', 'fetch'] as const).map((type) => (
+        <DropdownMenuItem
+          key={type}
+          render={
+            <CopyButton
+              text={getSnippet(type, pageUrl, apiUrl)}
+              label={SNIPPET_LABELS[type]}
+              variant="ghost"
+              className="w-full justify-start"
+            />
+          }
+        />
+      ))}
+    </>
   )
 }

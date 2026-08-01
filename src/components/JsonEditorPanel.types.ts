@@ -1,86 +1,50 @@
-import type { JsonContract, JsonDocumentExample } from '@/lib/schemas'
-import type { ContractDiagnostics } from '@/lib/contract/inferContract'
+import type {
+  DocumentEditorCommands,
+  DocumentEditorViewModel,
+} from '@/lib/document-editor-model'
+import type {
+  JsonEditorAssistance,
+  JsonEditorPathCoordination,
+  JsonEditorValidation,
+} from './json-editor/JsonEditor.types'
 
-export interface JsonEditorPanelFields {
-  value: string
-  onChange: (value: string) => void
-  examples?: Array<JsonDocumentExample>
-  activeExampleId?: string
-  onSelectExample?: (id: string) => void
-  onRenameExample?: (id: string, name: string) => void
-  onAddExample?: () => void
-  onDeleteExample?: (id: string) => void
-  error?: string
-  onSubmit: () => Promise<void>
+type EditorMode =
+  | { type: 'create' }
+  | {
+      type: 'saved'
+      documentUrl: string
+      apiUrl: string
+    }
+
+export type JsonEditorPanelProps = {
+  model: DocumentEditorViewModel
+  commands: DocumentEditorCommands
+  mode: EditorMode
   title?: string
   description?: string
-  onReset: () => void
-  contract?: JsonContract
-  onContractChange: (contract: JsonContract) => void
-  contractDisabled?: boolean
-  contractDiagnostics?: ContractDiagnostics
-  hasUnsavedChanges?: boolean
 }
 
 export type JsonEditorPanelHeaderProps = Pick<
-  JsonEditorPanelFields,
+  JsonEditorPanelProps,
   'description' | 'title'
 > & {
-  mode: 'create' | 'view'
+  mode: EditorMode['type']
 }
 
-export type DocumentEditorActionsProps = Pick<
-  JsonEditorPanelFields,
-  'onSubmit' | 'onReset'
-> & {
-  disabled: boolean
-} & (
-    | { mode: 'create' }
-    | {
-        mode: 'view'
-        documentUrl: string
-        apiUrl: string
-        json: string
-        hasUnsavedChanges?: boolean
-      }
-  )
+export type DocumentEditorActionsProps = {
+  mode: EditorMode
+  model: DocumentEditorViewModel
+  commands: Pick<
+    DocumentEditorCommands,
+    'generateTypeScript' | 'reset' | 'submit'
+  >
+}
 
-export type JsonEditorGridProps = Pick<
-  JsonEditorPanelFields,
-  'value' | 'onChange' | 'error'
->
-
-type BaseProps = Pick<
-  JsonEditorPanelFields,
-  | 'value'
-  | 'onChange'
-  | 'examples'
-  | 'activeExampleId'
-  | 'onSelectExample'
-  | 'onRenameExample'
-  | 'onAddExample'
-  | 'onDeleteExample'
-  | 'error'
-  | 'onSubmit'
-  | 'onReset'
-  | 'contract'
-  | 'onContractChange'
-  | 'contractDisabled'
-  | 'contractDiagnostics'
-  | 'hasUnsavedChanges'
->
-
-export type JsonEditorPanelProps =
-  | (BaseProps & {
-      mode: 'create'
-      title?: string
-      description?: string
-    })
-  | (BaseProps & {
-      mode: 'view'
-      title?: string
-      description?: string
-      documentUrl: string
-      apiUrl: string
-      hasUnsavedChanges?: boolean
-    })
+export type JsonEditorGridProps = {
+  value: string
+  onChange: (value: string) => void
+  validation: JsonEditorValidation
+  size?: number
+  assistance: JsonEditorAssistance
+  pathCoordination: JsonEditorPathCoordination
+}

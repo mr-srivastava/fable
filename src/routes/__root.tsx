@@ -1,8 +1,4 @@
-import {
-  HeadContent,
-  Scripts,
-  createRootRouteWithContext,
-} from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
@@ -11,18 +7,11 @@ import { ThemeProvider } from '../components/ThemeProvider'
 
 import ConvexProvider from '../integrations/convex/provider'
 
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-
 import appCss from '../styles.css?url'
 import { getThemeInitScript } from '../hooks/use-theme'
+import { publicConfig } from '@/config/runtime'
 
-import type { QueryClient } from '@tanstack/react-query'
-
-interface MyRouterContext {
-  queryClient: QueryClient
-}
-
-export const Route = createRootRouteWithContext<MyRouterContext>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       {
@@ -72,21 +61,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <ConvexProvider>
             <Header />
             {children}
-            {import.meta.env.DEV &&
-              import.meta.env.VITE_SHOW_DEVTOOLS === 'true' && (
-                <TanStackDevtools
-                  config={{
-                    position: 'bottom-right',
-                  }}
-                  plugins={[
-                    {
-                      name: 'Tanstack Router',
-                      render: <TanStackRouterDevtoolsPanel />,
-                    },
-                    TanStackQueryDevtools,
-                  ]}
-                />
-              )}
+            {import.meta.env.DEV && publicConfig.showDevtools && (
+              <TanStackDevtools
+                config={{
+                  position: 'bottom-right',
+                }}
+                plugins={[
+                  {
+                    name: 'Tanstack Router',
+                    render: <TanStackRouterDevtoolsPanel />,
+                  },
+                ]}
+              />
+            )}
           </ConvexProvider>
         </ThemeProvider>
         <Scripts />

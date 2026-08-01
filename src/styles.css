@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 @import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -44,6 +45,11 @@ code {
   --chart-3: oklch(0.68 0.15 80);
   --chart-4: oklch(0.54 0.12 285);
   --chart-5: oklch(0.55 0.12 20);
+  --syntax-property: oklch(0.46 0.115 220);
+  --syntax-string: oklch(0.45 0.13 145);
+  --syntax-number: oklch(0.48 0.135 65);
+  --syntax-boolean: oklch(0.46 0.12 292);
+  --syntax-null: oklch(0.46 0.025 255);
   --sidebar: oklch(0.91 0.011 100);
   --sidebar-foreground: oklch(0.205 0.018 248);
   --sidebar-primary: oklch(0.58 0.145 210);
@@ -104,6 +110,11 @@ code {
   --chart-3: oklch(0.74 0.15 80);
   --chart-4: oklch(0.67 0.12 285);
   --chart-5: oklch(0.68 0.13 20);
+  --syntax-property: oklch(0.78 0.105 210);
+  --syntax-string: oklch(0.78 0.12 145);
+  --syntax-number: oklch(0.8 0.12 80);
+  --syntax-boolean: oklch(0.78 0.1 292);
+  --syntax-null: oklch(0.72 0.025 255);
   --sidebar: oklch(0.295 0.012 70);
   --sidebar-foreground: oklch(0.925 0.012 250);
   --sidebar-primary: oklch(0.72 0.13 205);

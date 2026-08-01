@@ -1,7 +1,8 @@
 import { httpRouter } from 'convex/server'
-import { parseDocumentId } from '../src/lib/schemas'
+import { parseDocumentId } from '../shared/document'
 import { httpAction } from './_generated/server'
 import { api } from './_generated/api'
+import type { Id } from './_generated/dataModel'
 
 const http = httpRouter()
 
@@ -15,6 +16,10 @@ function getJsonResponse(body: unknown, init?: ResponseInit) {
   })
 }
 
+function getErrorResponse(code: string, message: string, status: number) {
+  return getJsonResponse({ error: message, code }, { status })
+}
+
 http.route({
   path: '/api/blob',
   method: 'POST',
@@ -23,13 +28,23 @@ http.route({
     try {
       body = await request.json()
     } catch {
-      return getJsonResponse({ error: 'Invalid JSON body' }, { status: 400 })
+      return getErrorResponse('INVALID_JSON', 'Invalid JSON body', 400)
     }
 
     const data = JSON.stringify(body)
 
     try {
-      const blobId = await ctx.runMutation(api.documents.create, { data })
+      const now = Date.now()
+      const blobId = await ctx.runAction(api.documentWrites.create, {
+        examples: [
+          {
+            id: 'default',
+            name: 'Example',
+            data,
+            createdAt: now,
+          },
+        ],
+      })
       const siteUrl =
         process.env.SITE_URL ??
         process.env.CONVEX_SITE_URL ??
@@ -40,7 +55,7 @@ http.route({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to create blob'
-      return getJsonResponse({ error: message }, { status: 400 })
+      return getErrorResponse('VALIDATION_ERROR', message, 400)
     }
   }),
 })
@@ -51,16 +66,16 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const url = new URL(request.url)
     const rawId = decodeURIComponent(url.pathname.replace('/api/blob/', ''))
-    const id = parseDocumentId(rawId)
+    const id = parseDocumentId<Id<'documents'>>(rawId)
 
     if (!id) {
-      return getJsonResponse({ error: 'Invalid blob id' }, { status: 400 })
+      return getErrorResponse('INVALID_BLOB_ID', 'Invalid blob id', 400)
     }
 
     const document = await ctx.runQuery(api.documents.get, { id })
 
     if (!document) {
-      return getJsonResponse({ error: 'Blob not found' }, { status: 404 })
+      return getErrorResponse('BLOB_NOT_FOUND', 'Blob not found', 404)
     }
 
     return new Response(document.data, {

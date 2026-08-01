@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { AlertTriangle, Check } from 'lucide-react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import type {
   JsonEditorGridProps,
   JsonEditorPanelHeaderProps,
@@ -8,9 +8,8 @@ import type {
 import { ContractPanel } from '@/components/contract/ContractPanel'
 import { ExamplesTabs } from '@/components/examples/ExamplesTabs'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
-import { JsonEditor } from '@/components/JsonEditor'
+import { JsonEditor } from '@/components/json-editor/JsonEditor'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
@@ -18,8 +17,7 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { validateJSON } from '@/lib/validators'
-import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/hooks/use-media-query'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
@@ -30,7 +28,15 @@ const CREATE_DEFAULTS = {
     'Paste JSON to infer field metadata, annotate the contract, and share the specimen.',
 } as const
 
-type PayloadStatus = 'waiting' | 'valid' | 'invalid'
+const subscribeToHydration = () => () => undefined
+
+function useHydrated() {
+  return useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  )
+}
 
 function JsonEditorPanelHeader({
   mode,
@@ -69,68 +75,20 @@ function JsonEditorPanelHeader({
   )
 }
 
-function getStatusBadge(status: PayloadStatus) {
-  if (status === 'valid') return 'Valid JSON'
-  if (status === 'invalid') return 'Invalid JSON'
-  return 'Waiting'
-}
-
-function PayloadStatusBadge({
-  status,
-  hasUnsavedChanges,
-}: {
-  status: PayloadStatus
-  hasUnsavedChanges?: boolean
-}) {
-  if (status === 'valid') {
-    return (
-      <Badge
-        variant="outline"
-        className={cn(
-          'gap-1.5 border-success/40 bg-success/10 text-success',
-          hasUnsavedChanges &&
-            'border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300',
-        )}
-      >
-        <span
-          className={cn(
-            'size-2 rounded-full bg-success',
-            hasUnsavedChanges &&
-              'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgb(251_191_36_/_0.18)]',
-          )}
-          aria-hidden="true"
-        />
-        {hasUnsavedChanges ? (
-          'Unsaved changes'
-        ) : (
-          <>
-            <Check className="size-3.5" />
-            Valid JSON
-          </>
-        )}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge variant={status === 'invalid' ? 'default' : 'secondary'}>
-      {getStatusBadge(status)}
-    </Badge>
-  )
-}
-
 function ContractDiagnosticsNotice({
   contractDiagnostics,
   examples,
-}: Pick<JsonEditorPanelProps, 'contractDiagnostics' | 'examples'>) {
+}: {
+  contractDiagnostics?: JsonEditorPanelProps['model']['contract']['diagnostics']
+  examples: JsonEditorPanelProps['model']['examples']['items']
+}) {
   const [dismissed, setDismissed] = useState(false)
   const [showGroups, setShowGroups] = useState(false)
 
   if (
     dismissed ||
     !contractDiagnostics ||
-    contractDiagnostics.severity !== 'warning' ||
-    !examples
+    contractDiagnostics.severity !== 'warning'
   ) {
     return null
   }
@@ -188,248 +146,241 @@ function ContractDiagnosticsNotice({
   )
 }
 
+function SchemaStatusNotice({
+  contract,
+}: {
+  contract: JsonEditorPanelProps['model']['contract']
+}) {
+  if (contract.status.type === 'inferring') {
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        Updating contract…
+      </p>
+    )
+  }
+  if (contract.status.type === 'invalidJson') return null
+  if (contract.status.type === 'invalidContract') {
+    return (
+      <Alert variant="destructive" role="alert">
+        <AlertTitle>Invalid contract</AlertTitle>
+        <AlertDescription>{contract.status.message}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (contract.status.type !== 'violations') return null
+  return (
+    <p role="status" className="text-sm text-destructive">
+      {contract.status.count} contract issue
+      {contract.status.count === 1 ? '' : 's'} across the examples. Review the
+      marked values and fields.
+    </p>
+  )
+}
+
 function PayloadPanel({
   value,
   onChange,
-  error,
-  status,
+  validation,
+  size,
+  assistance,
+  pathCoordination,
   examples,
   activeExampleId,
   onSelectExample,
   onRenameExample,
   onAddExample,
   onDeleteExample,
-  hasUnsavedChanges,
+  validationCounts,
+  canAddExample,
+  fillHeight = false,
 }: JsonEditorGridProps & {
-  status: PayloadStatus
-  examples?: JsonEditorPanelProps['examples']
-  activeExampleId?: string
-  onSelectExample?: (id: string) => void
-  onRenameExample?: (id: string, name: string) => void
-  onAddExample?: () => void
-  onDeleteExample?: (id: string) => void
-  hasUnsavedChanges?: boolean
+  examples: JsonEditorPanelProps['model']['examples']['items']
+  activeExampleId: string
+  onSelectExample: (id: string) => void
+  onRenameExample: (id: string, name: string) => void
+  onAddExample: () => void
+  onDeleteExample: (id: string) => void
+  validationCounts: Record<string, number>
+  canAddExample: boolean
+  fillHeight?: boolean
 }) {
-  const showExamples =
-    examples &&
-    activeExampleId &&
-    onSelectExample &&
-    onRenameExample &&
-    onAddExample &&
-    onDeleteExample
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Payload
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Source JSON for this specimen.
-          </p>
-        </div>
-        <PayloadStatusBadge
-          status={status}
-          hasUnsavedChanges={hasUnsavedChanges}
-        />
-      </div>
-      {showExamples && (
-        <ExamplesTabs
-          examples={examples}
-          activeExampleId={activeExampleId}
-          onSelect={onSelectExample}
-          onRename={onRenameExample}
-          onAdd={onAddExample}
-          onDelete={onDeleteExample}
-        />
-      )}
-      <Tabs defaultValue="editor" className="gap-3">
-        <TabsList>
-          <TabsTrigger value="editor">Editor</TabsTrigger>
-          <TabsTrigger value="formatted">Formatted</TabsTrigger>
-        </TabsList>
-        <TabsContent value="editor">
-          <JsonEditor
-            mode="edit"
-            value={value}
-            onChange={onChange}
-            error={error}
-          />
-        </TabsContent>
-        <TabsContent value="formatted">
-          <JsonEditor
-            mode="view"
-            value={value}
-            height="clamp(20rem, 48vh, 30rem)"
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-function FormattedPanel({ value }: Pick<JsonEditorGridProps, 'value'>) {
-  return (
-    <div className="animate-fade-in-up-delay-2 space-y-2">
+    <div
+      className={
+        fillHeight
+          ? 'flex h-full min-h-0 flex-col gap-2'
+          : 'flex flex-col gap-2'
+      }
+    >
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          Formatted
+          Payload
         </h2>
         <p className="text-sm text-muted-foreground">
-          Read-only normalized view of the payload.
+          Source JSON for this specimen.
         </p>
       </div>
-      <JsonEditor
-        mode="view"
-        value={value}
-        height="clamp(20rem, 48vh, 30rem)"
-      />
+      <ExamplesTabs
+        examples={examples}
+        activeExampleId={activeExampleId}
+        onSelect={onSelectExample}
+        onRename={onRenameExample}
+        onAdd={onAddExample}
+        onDelete={onDeleteExample}
+        validationCounts={validationCounts}
+        canAdd={canAddExample}
+        fillHeight={fillHeight}
+      >
+        <div className={fillHeight ? 'h-full min-h-0' : 'space-y-3'}>
+          <JsonEditor
+            value={value}
+            onChange={onChange}
+            validation={validation}
+            size={size}
+            assistance={assistance}
+            pathCoordination={pathCoordination}
+            height={fillHeight ? '100%' : undefined}
+            className={fillHeight ? 'h-full min-h-0' : undefined}
+          />
+        </div>
+      </ExamplesTabs>
     </div>
   )
 }
 
 export function JsonEditorPanel(props: JsonEditorPanelProps) {
-  const {
-    value,
-    onChange,
-    error,
-    onSubmit,
-    onReset,
-    description: descriptionProp,
-    title,
-    mode,
-    contract,
-    onContractChange,
-    contractDisabled,
-    contractDiagnostics,
-    examples,
-    activeExampleId,
-    onSelectExample,
-    onRenameExample,
-    onAddExample,
-    onDeleteExample,
-    hasUnsavedChanges,
-  } = props
+  const { model, commands, description: descriptionProp, title, mode } = props
+  const { contract, examples, payload } = model
+  const [activePointer, setActivePointer] = useState<string>()
+  const [activePointerPresent, setActivePointerPresent] = useState(true)
+  const isDesktop = useMediaQuery('(min-width: 768px)')
+  const hydrated = useHydrated()
+  const assistance = useMemo<JsonEditorGridProps['assistance']>(() => {
+    if (!contract.value) return { status: 'unavailable' }
+    const current = contract.valueFreshness === 'current'
+    return current
+      ? {
+          status: 'available',
+          freshness: 'current',
+          fields: contract.value.fields,
+          diagnostics: contract.schemaDiagnostics.filter(
+            (diagnostic) => diagnostic.exampleId === examples.activeId,
+          ),
+        }
+      : {
+          status: 'available',
+          freshness: 'retained',
+          fields: contract.value.fields,
+        }
+  }, [contract, examples.activeId])
+  const pathCoordination = useMemo<JsonEditorGridProps['pathCoordination']>(
+    () => ({
+      activePointer,
+      onActivePointerChange: setActivePointer,
+      onActivePointerPresenceChange: setActivePointerPresent,
+    }),
+    [activePointer],
+  )
+  const validation: JsonEditorGridProps['validation'] =
+    payload.status !== 'invalid'
+      ? { status: 'valid' }
+      : payload.reason === 'syntax'
+        ? { status: 'syntaxError' }
+        : { status: 'externalError', message: payload.message }
 
-  const isCreate = mode === 'create'
+  const isCreate = mode.type === 'create'
   const description =
     descriptionProp ?? (isCreate ? CREATE_DEFAULTS.description : undefined)
 
-  const submitDisabled = useMemo(() => {
-    const trimmed = value.trim()
-    if (!trimmed) return true
-    if (examples?.some((example) => !validateJSON(example.data).valid)) {
-      return true
-    }
-    return !validateJSON(value).valid
-  }, [examples, value])
+  const payloadPanel = (
+    <PayloadPanel
+      value={payload.value}
+      onChange={(json) => commands.updateExample(examples.activeId, json)}
+      validation={validation}
+      size={payload.size}
+      assistance={assistance}
+      pathCoordination={pathCoordination}
+      examples={examples.items}
+      activeExampleId={examples.activeId}
+      onSelectExample={commands.selectExample}
+      onRenameExample={commands.renameExample}
+      onAddExample={commands.addExample}
+      onDeleteExample={commands.removeExample}
+      validationCounts={examples.validationCounts}
+      canAddExample={examples.canAdd}
+      fillHeight={isDesktop}
+    />
+  )
 
-  const payloadStatus: PayloadStatus = useMemo(() => {
-    const trimmed = value.trim()
-    if (!trimmed) return 'waiting'
-    return validateJSON(value).valid ? 'valid' : 'invalid'
-  }, [value])
+  const contractPanel = (
+    <div
+      className={
+        isDesktop ? 'flex h-full min-h-0 flex-col gap-3' : 'flex flex-col gap-3'
+      }
+    >
+      <ContractDiagnosticsNotice
+        contractDiagnostics={contract.diagnostics}
+        examples={examples.items}
+      />
+      <div className={isDesktop ? 'min-h-0 flex-1' : undefined}>
+        <ContractPanel
+          contract={contract.value}
+          disabled={contract.status.type === 'invalidJson'}
+          onOverrideChange={commands.changeContractOverride}
+          schemaDiagnostics={contract.schemaDiagnostics}
+          activePointer={activePointer}
+          activePointerPresent={activePointerPresent}
+          onSelectPointer={setActivePointer}
+          fillHeight={isDesktop}
+        />
+      </div>
+    </div>
+  )
 
   return (
     <>
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 md:pb-24">
+      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 pb-32 sm:px-6">
         <JsonEditorPanelHeader
-          mode={mode}
+          mode={mode.type}
           title={title}
           description={description}
         />
+        <SchemaStatusNotice contract={contract} />
 
-        <Tabs
-          defaultValue="payload"
-          className="gap-4 md:hidden"
-          aria-label="Workspace panels"
-        >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="payload">Payload</TabsTrigger>
-            <TabsTrigger value="formatted">Formatted</TabsTrigger>
-            <TabsTrigger value="contract">Contract</TabsTrigger>
-          </TabsList>
-          <TabsContent value="payload">
-            <PayloadPanel
-              value={value}
-              onChange={onChange}
-              error={error}
-              status={payloadStatus}
-              examples={examples}
-              activeExampleId={activeExampleId}
-              onSelectExample={onSelectExample}
-              onRenameExample={onRenameExample}
-              onAddExample={onAddExample}
-              onDeleteExample={onDeleteExample}
-              hasUnsavedChanges={hasUnsavedChanges}
-            />
-          </TabsContent>
-          <TabsContent value="formatted">
-            <FormattedPanel value={value} />
-          </TabsContent>
-          <TabsContent value="contract">
-            <ContractDiagnosticsNotice
-              contractDiagnostics={contractDiagnostics}
-              examples={examples}
-            />
-            <ContractPanel
-              contract={contract}
-              disabled={contractDisabled}
-              onChange={onContractChange}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <ResizablePanelGroup
-          orientation="horizontal"
-          className="hidden min-h-[36rem] gap-4 md:flex"
-        >
-          <ResizablePanel defaultSize={56} minSize={42}>
-            <PayloadPanel
-              value={value}
-              onChange={onChange}
-              error={error}
-              status={payloadStatus}
-              examples={examples}
-              activeExampleId={activeExampleId}
-              onSelectExample={onSelectExample}
-              onRenameExample={onRenameExample}
-              onAddExample={onAddExample}
-              onDeleteExample={onDeleteExample}
-              hasUnsavedChanges={hasUnsavedChanges}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={44} minSize={32}>
-            <div className="flex flex-col gap-3">
-              <ContractDiagnosticsNotice
-                contractDiagnostics={contractDiagnostics}
-                examples={examples}
-              />
-              <ContractPanel
-                contract={contract}
-                disabled={contractDisabled}
-                onChange={onContractChange}
-              />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        {!hydrated ? (
+          <div
+            className="min-h-[36rem] md:h-[clamp(36rem,calc(100dvh-12rem),46rem)]"
+            aria-hidden="true"
+          />
+        ) : isDesktop ? (
+          <ResizablePanelGroup
+            orientation="horizontal"
+            className="h-[clamp(36rem,calc(100dvh-12rem),46rem)] gap-4"
+          >
+            <ResizablePanel defaultSize={56} minSize={42}>
+              {payloadPanel}
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={44} minSize={32}>
+              {contractPanel}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <Tabs
+            defaultValue="payload"
+            className="gap-4"
+            aria-label="Workspace panels"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="payload">Examples</TabsTrigger>
+              <TabsTrigger value="contract">Contract</TabsTrigger>
+            </TabsList>
+            <TabsContent value="payload">{payloadPanel}</TabsContent>
+            <TabsContent value="contract">{contractPanel}</TabsContent>
+          </Tabs>
+        )}
       </section>
-      <DocumentEditorActions
-        onSubmit={onSubmit}
-        onReset={onReset}
-        disabled={submitDisabled}
-        {...(mode === 'view'
-          ? {
-              mode: 'view',
-              documentUrl: props.documentUrl,
-              apiUrl: props.apiUrl,
-              json: value,
-              hasUnsavedChanges,
-            }
-          : { mode: 'create' })}
-      />
+      <DocumentEditorActions mode={mode} model={model} commands={commands} />
     </>
   )
 }

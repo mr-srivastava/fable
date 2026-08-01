@@ -1,4 +1,4 @@
-import type { JsonContractField } from '@/lib/schemas'
+import type { JsonContractField } from '@shared/document'
 
 export type ContractDisplayRow = {
   field: JsonContractField

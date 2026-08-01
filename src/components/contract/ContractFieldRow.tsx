@@ -1,5 +1,8 @@
 import { EnumValuesInput } from './EnumValuesInput'
-import type { JsonContractField } from '@/lib/schemas'
+import type { Ref } from 'react'
+import type { JsonContractField } from '@shared/document'
+import type { SchemaValidationDiagnostic } from '@shared/json-schema'
+import type { ContractOverrideChange } from '@/lib/document-draft'
 import {
   AccordionContent,
   AccordionItem,
@@ -24,7 +27,11 @@ type ContractFieldRowProps = {
   label: string
   isContainer: boolean
   childCount?: number
-  onChange: (field: JsonContractField) => void
+  onOverrideChange: (change: ContractOverrideChange) => void
+  schemaDiagnostics?: Array<SchemaValidationDiagnostic>
+  selected?: boolean
+  onSelect?: () => void
+  rowRef?: Ref<HTMLDivElement>
 }
 
 export function ContractFieldReferenceItem({
@@ -33,19 +40,30 @@ export function ContractFieldReferenceItem({
   label,
   isContainer,
   childCount = 0,
-  onChange,
+  onOverrideChange,
+  schemaDiagnostics = [],
+  selected = false,
+  onSelect,
+  rowRef,
 }: ContractFieldRowProps) {
   const isEditable = !isContainer
+  const pointer = field.schemaPointer
 
   return (
     <AccordionItem
+      ref={rowRef}
       value={field.path}
       className={cn(
         'border-b px-3 last:border-b-0',
         isContainer && 'bg-muted/20',
+        selected && 'bg-primary/10 ring-1 ring-inset ring-primary/40',
       )}
     >
-      <AccordionTrigger className="py-3 hover:no-underline">
+      <AccordionTrigger
+        className="py-3 hover:no-underline"
+        aria-label={`${selected ? 'Selected field: ' : ''}${field.path}`}
+        onClick={onSelect}
+      >
         <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-left">
           <div
             className="flex min-w-0 items-center gap-2"
@@ -71,6 +89,12 @@ export function ContractFieldReferenceItem({
             <Badge variant={isContainer ? 'outline' : 'secondary'}>
               {field.type}
             </Badge>
+            {schemaDiagnostics.length > 0 && (
+              <Badge variant="destructive">
+                {schemaDiagnostics.length} issue
+                {schemaDiagnostics.length === 1 ? '' : 's'}
+              </Badge>
+            )}
             {isContainer && childCount > 0 && (
               <span className="hidden text-xs font-normal text-muted-foreground sm:inline">
                 {childCount} child{childCount === 1 ? '' : 'ren'}
@@ -91,8 +115,14 @@ export function ContractFieldReferenceItem({
               <Switch
                 size="sm"
                 checked={field.required}
+                disabled={!pointer}
                 onCheckedChange={(checked) =>
-                  onChange({ ...field, required: checked })
+                  pointer &&
+                  onOverrideChange({
+                    type: 'requiredChanged',
+                    pointer,
+                    required: checked,
+                  })
                 }
               />
             </label>
@@ -101,8 +131,14 @@ export function ContractFieldReferenceItem({
               <Switch
                 size="sm"
                 checked={field.nullable}
+                disabled={!pointer}
                 onCheckedChange={(checked) =>
-                  onChange({ ...field, nullable: checked })
+                  pointer &&
+                  onOverrideChange({
+                    type: 'nullableChanged',
+                    pointer,
+                    nullable: checked,
+                  })
                 }
               />
             </label>
@@ -116,16 +152,26 @@ export function ContractFieldReferenceItem({
                 <FieldLabel>Enum values</FieldLabel>
                 <EnumValuesInput
                   value={field.enumValues}
-                  onChange={(enumValues) => onChange({ ...field, enumValues })}
+                  onChange={(enumValues) =>
+                    pointer &&
+                    onOverrideChange({
+                      type: 'enumChanged',
+                      pointer,
+                      enumValues,
+                    })
+                  }
                 />
               </Field>
               <Field>
                 <FieldLabel>Description</FieldLabel>
                 <Textarea
                   value={field.description ?? ''}
+                  disabled={!pointer}
                   onChange={(event) =>
-                    onChange({
-                      ...field,
+                    pointer &&
+                    onOverrideChange({
+                      type: 'descriptionChanged',
+                      pointer,
                       description: event.currentTarget.value || undefined,
                     })
                   }
@@ -140,9 +186,12 @@ export function ContractFieldReferenceItem({
               <FieldContent>
                 <Input
                   value={field.description ?? ''}
+                  disabled={!pointer}
                   onChange={(event) =>
-                    onChange({
-                      ...field,
+                    pointer &&
+                    onOverrideChange({
+                      type: 'descriptionChanged',
+                      pointer,
                       description: event.currentTarget.value || undefined,
                     })
                   }

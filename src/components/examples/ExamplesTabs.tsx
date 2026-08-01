@@ -1,7 +1,17 @@
-import { Plus, Trash2 } from 'lucide-react'
-import type { JsonDocumentExample } from '@/lib/schemas'
-import { Button } from '@/components/ui/button'
+import { useEffect, useRef, useState } from 'react'
+import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import type { JsonDocumentExample } from '@shared/document'
+import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
 type ExamplesTabsProps = {
@@ -11,6 +21,10 @@ type ExamplesTabsProps = {
   onRename: (id: string, name: string) => void
   onAdd: () => void
   onDelete: (id: string) => void
+  validationCounts: Record<string, number>
+  canAdd: boolean
+  fillHeight?: boolean
+  children: ReactNode
 }
 
 export function ExamplesTabs({
@@ -20,62 +34,184 @@ export function ExamplesTabs({
   onRename,
   onAdd,
   onDelete,
+  validationCounts,
+  canAdd,
+  fillHeight = false,
+  children,
 }: ExamplesTabsProps) {
+  const activeExample =
+    examples.find((example) => example.id === activeExampleId) ?? examples[0]
+  const [renaming, setRenaming] = useState(false)
+  const [draftName, setDraftName] = useState(activeExample.name)
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>())
+  const cancelRenameRef = useRef(false)
+  const beginRenameRef = useRef(false)
+
+  useEffect(() => {
+    setRenaming(false)
+    setDraftName(activeExample.name)
+  }, [activeExample.id, activeExample.name])
+
+  function focusActiveTab() {
+    requestAnimationFrame(() => tabRefs.current.get(activeExampleId)?.focus())
+  }
+
+  function commitRename() {
+    if (cancelRenameRef.current) {
+      cancelRenameRef.current = false
+    } else if (draftName !== activeExample.name) {
+      onRename(activeExample.id, draftName)
+    }
+    setRenaming(false)
+    focusActiveTab()
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-2" role="tablist">
-      {examples.map((example) => {
-        const isActive = example.id === activeExampleId
+    <Tabs
+      value={activeExampleId}
+      onValueChange={onSelect}
+      className={fillHeight ? 'flex min-h-0 flex-1 flex-col gap-3' : 'gap-3'}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-medium text-foreground">Examples</h3>
+          <p className="text-xs text-muted-foreground">
+            {examples.length} {examples.length === 1 ? 'payload' : 'payloads'}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!canAdd}
+          onClick={onAdd}
+        >
+          <Plus />
+          Add example
+        </Button>
+      </div>
 
-        return (
-          <div
-            key={example.id}
-            className={cn(
-              'flex h-9 items-center gap-1 rounded-md border bg-background px-1 shadow-xs transition-colors',
-              isActive
-                ? 'border-primary/50 bg-primary/5'
-                : 'border-border hover:bg-muted/50',
-            )}
+      <div className="min-w-0 overflow-x-auto pb-1">
+        <TabsList
+          aria-label="Document examples"
+          className="w-max min-w-full justify-start"
+        >
+          {examples.map((example) => {
+            const count = validationCounts[example.id] ?? 0
+            const isActive = example.id === activeExampleId
+
+            return (
+              <div
+                key={example.id}
+                className="relative flex min-w-24 flex-1 items-center"
+              >
+                <TabsTrigger
+                  ref={(node) => {
+                    if (node) tabRefs.current.set(example.id, node)
+                    else tabRefs.current.delete(example.id)
+                  }}
+                  value={example.id}
+                  aria-label={`${example.name}${count ? `, ${count} contract violation${count === 1 ? '' : 's'}` : ''}`}
+                  className={`w-full min-w-0 gap-2 px-3 ${isActive ? 'pr-10' : ''}`}
+                >
+                  <span className="max-w-32 truncate">{example.name}</span>
+                  {count > 0 && (
+                    <span className="rounded-full bg-destructive px-1.5 text-[0.65rem] font-semibold text-destructive-foreground">
+                      {count}
+                    </span>
+                  )}
+                </TabsTrigger>
+
+                {isActive && (
+                  <DropdownMenu
+                    onOpenChangeComplete={(open) => {
+                      if (!open && beginRenameRef.current) {
+                        beginRenameRef.current = false
+                        requestAnimationFrame(() => setRenaming(true))
+                      }
+                    }}
+                  >
+                    <DropdownMenuTrigger
+                      type="button"
+                      className={cn(
+                        buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                        'absolute right-1',
+                      )}
+                      aria-label={`Actions for ${example.name}`}
+                    >
+                      <MoreHorizontal />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-48">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setDraftName(example.name)
+                            beginRenameRef.current = true
+                          }}
+                        >
+                          <Pencil />
+                          Rename “{example.name}”
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={examples.length === 1}
+                          onSelect={() => onDelete(example.id)}
+                        >
+                          <Trash2 />
+                          Delete “{example.name}”
+                        </DropdownMenuItem>
+                        {examples.length === 1 && (
+                          <p className="max-w-48 px-2 py-1.5 text-xs text-muted-foreground">
+                            A specimen needs at least one example.
+                          </p>
+                        )}
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            )
+          })}
+        </TabsList>
+      </div>
+
+      {renaming && (
+        <div className="flex items-center gap-2 rounded-md border bg-muted/30 p-2">
+          <label
+            htmlFor="active-example-name"
+            className="shrink-0 text-sm font-medium"
           >
-            <div
-              role="tab"
-              tabIndex={0}
-              aria-selected={isActive}
-              className="h-full rounded-sm px-2 text-sm font-medium text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              onClick={() => onSelect(example.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  onSelect(example.id)
-                }
-              }}
-            >
-              <Input
-                aria-label="Example name"
-                className="h-7 w-28 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                value={example.name}
-                onChange={(event) => onRename(example.id, event.target.value)}
-                onFocus={() => onSelect(example.id)}
-                onClick={(event) => event.stopPropagation()}
-              />
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              disabled={examples.length === 1}
-              aria-label={`Delete ${example.name}`}
-              onClick={() => onDelete(example.id)}
-            >
-              <Trash2 />
-            </Button>
-          </div>
-        )
-      })}
+            Example name
+          </label>
+          <Input
+            id="active-example-name"
+            autoFocus
+            value={draftName}
+            onChange={(event) => setDraftName(event.currentTarget.value)}
+            onBlur={commitRename}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commitRename()
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                cancelRenameRef.current = true
+                setDraftName(activeExample.name)
+                setRenaming(false)
+                focusActiveTab()
+              }
+            }}
+          />
+        </div>
+      )}
 
-      <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-        <Plus />
-        Example
-      </Button>
-    </div>
+      <TabsContent
+        value={activeExampleId}
+        className={fillHeight ? 'min-h-0 flex-1' : undefined}
+      >
+        {children}
+      </TabsContent>
+    </Tabs>
   )
 }

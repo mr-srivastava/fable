@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as documentModel from "../documentModel.js";
+import type * as documentWrites from "../documentWrites.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 
@@ -18,6 +20,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  documentModel: typeof documentModel;
+  documentWrites: typeof documentWrites;
   documents: typeof documents;
   http: typeof http;
 }>;

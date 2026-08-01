@@ -1,18 +1,22 @@
-import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { useState } from 'react'
+import type { ComponentProps } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const COPY_RESET_MS = 2000
 
-interface CopyButtonProps {
-  text: string
+type CopyButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  'children' | 'onClick'
+> & {
   label: string
   ariaLabel?: string
-  variant?: 'outline' | 'ghost' | 'default'
-  size?: 'default' | 'sm' | 'icon' | 'icon-sm'
-  className?: string
-}
+  onClick?: ComponentProps<typeof Button>['onClick']
+} & (
+    | { text: string; getText?: never }
+    | { text?: never; getText: () => string | Promise<string> }
+  )
 
 export function CopyButton({
   text,
@@ -21,28 +25,43 @@ export function CopyButton({
   variant = 'outline',
   size = 'sm',
   className,
+  disabled = false,
+  getText,
+  onClick,
+  ...buttonProps
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
+  const [copying, setCopying] = useState(false)
 
-  const handleCopy = async () => {
+  const handleCopy = async (
+    event: Parameters<NonNullable<CopyButtonProps['onClick']>>[0],
+  ) => {
+    onClick?.(event)
+    if (event.defaultPrevented) return
+
     setCopyError(false)
+    setCopying(true)
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(getText ? await getText() : text)
       setCopied(true)
       setTimeout(() => setCopied(false), COPY_RESET_MS)
     } catch {
       setCopyError(true)
       setTimeout(() => setCopyError(false), COPY_RESET_MS)
+    } finally {
+      setCopying(false)
     }
   }
 
   return (
     <Button
+      {...buttonProps}
       type="button"
       variant={variant}
       size={size}
       onClick={handleCopy}
+      disabled={disabled || copying}
       aria-label={ariaLabel ?? `Copy ${label}`}
       className={cn(
         'gap-2',
@@ -55,7 +74,7 @@ export function CopyButton({
       ) : (
         <Copy className="h-4 w-4" />
       )}
-      {label}
+      {copying ? 'Copying…' : label}
     </Button>
   )
 }

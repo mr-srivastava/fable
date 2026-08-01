@@ -17,6 +17,7 @@ describe('parseJsonSafely', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
+      expect(result.reason).toBe('syntax')
       expect(result.error).toContain('while parsing')
       expect(result.error).toContain('{"name":}')
     }
@@ -28,6 +29,7 @@ describe('parseJsonSafely', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
+      expect(result.reason).toBe('size')
       expect(result.error).toMatch(/^JSON too large:/)
       expect(result.size).toBeGreaterThan(MAX_JSON_SIZE)
     }

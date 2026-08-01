@@ -1,26 +1,28 @@
 import { URL, fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+import babel from '@rolldown/plugin-babel'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
-import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
 const IGNORED_NODE_MODULE_DIRECTIVES = new Set(['use client'])
-const IGNORED_NITRO_ROLLUP_WARNING_CODES = new Set([
+const IGNORED_BUILD_WARNING_CODES = new Set([
   'EVAL',
   'CIRCULAR_DEPENDENCY',
   'THIS_IS_UNDEFINED',
   'EMPTY_BUNDLE',
 ])
 
-function isIgnoredNodeModuleDirectiveWarning(warning: {
+type BuildWarning = {
   code?: string
   id?: string
   message: string
-}) {
+}
+
+function isIgnoredNodeModuleDirectiveWarning(warning: BuildWarning) {
   return (
     warning.code === 'MODULE_LEVEL_DIRECTIVE' &&
     warning.id?.includes('/node_modules/') &&
@@ -30,93 +32,52 @@ function isIgnoredNodeModuleDirectiveWarning(warning: {
   )
 }
 
-function getManualChunk(id: string): string | undefined {
-  if (!id.includes('/node_modules/')) return undefined
-
-  if (id.includes('/@codemirror/') || id.includes('/@lezer/')) {
-    return 'vendor-codemirror'
-  }
-
-  if (
-    id.includes('/@tanstack/') ||
-    id.includes('/@convex-dev/') ||
-    id.includes('/convex/')
-  ) {
-    return 'vendor-data'
-  }
-
-  if (id.includes('/@radix-ui/') || id.includes('/radix-ui/')) {
-    return 'vendor-radix'
-  }
-
-  if (id.includes('/react/') || id.includes('/react-dom/')) {
-    return 'vendor-react'
-  }
-
-  return undefined
-}
-
 const config = defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+    tsconfigPaths: true,
   },
   build: {
-    rollupOptions: {
-      onwarn(warning, warn) {
+    rolldownOptions: {
+      onLog(level, warning, defaultHandler) {
         if (
           isIgnoredNodeModuleDirectiveWarning(warning) ||
-          IGNORED_NITRO_ROLLUP_WARNING_CODES.has(warning.code ?? '')
+          IGNORED_BUILD_WARNING_CODES.has(warning.code ?? '')
         ) {
           return
         }
 
-        warn(warning)
+        defaultHandler(level, warning)
       },
       output: {
-        manualChunks: getManualChunk,
-      },
-    },
-  },
-  nitro: {
-    rollupConfig: {
-      onwarn(warning, warn) {
-        if (isIgnoredNodeModuleDirectiveWarning(warning)) {
-          return
-        }
-
-        warn(warning)
-      },
-    },
-    hooks: {
-      'rollup:before'(_nitro, rollupConfig) {
-        const outputOptions = Array.isArray(rollupConfig.output)
-          ? rollupConfig.output
-          : [rollupConfig.output]
-
-        for (const outputOption of outputOptions) {
-          if (outputOption) {
-            outputOption.manualChunks = undefined
-          }
-        }
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor-codemirror',
+              test: /node_modules[\\/](?:@codemirror|@lezer)[\\/]/,
+            },
+            {
+              name: 'vendor-data',
+              test: /node_modules[\\/](?:@tanstack|@convex-dev|convex)[\\/]/,
+            },
+            {
+              name: 'vendor-react',
+              test: /node_modules[\\/](?:react|react-dom)[\\/]/,
+            },
+          ],
+        },
       },
     },
   },
   plugins: [
     devtools(),
     nitro(),
-    // this is the plugin that enables path aliases
-    viteTsConfigPaths({
-      projects: ['./tsconfig.json'],
-    }),
     tailwindcss(),
     tanstackStart(),
-    viteReact({
-      babel: {
-        plugins: ['babel-plugin-react-compiler'],
-      },
-    }),
+    viteReact(),
+    babel({ plugins: ['babel-plugin-react-compiler'] }),
   ],
 })
 
