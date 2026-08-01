@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { CopyButton } from '@/components/CopyButton'
 import { CopySnippet } from '@/components/CopySnippet'
 import { cn } from '@/lib/utils'
+import { DocumentExportMenu } from '@/components/DocumentExportMenu'
 
 export function DocumentEditorActions(props: DocumentEditorActionsProps) {
   const { onSubmit, onReset, disabled, mode } = props
@@ -43,6 +44,7 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
           <Button variant="outline" onClick={onReset}>
             Reset
           </Button>
+          <DocumentExportMenu {...props.exports} />
           {mode === 'view' && (
             <>
               <CopyButton

@@ -51,4 +51,31 @@ describe('prepareDocumentRecord', () => {
       /^Document too large:/,
     )
   })
+
+  it('validates examples against a persisted JSON Schema', () => {
+    const jsonSchema = {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+    }
+    expect(() =>
+      prepareDocumentRecord(
+        [example('one', '{"id":1}')],
+        undefined,
+        jsonSchema,
+      ),
+    ).toThrow('All examples must satisfy the contract')
+  })
+
+  it('includes schema and overrides in the total stored size', () => {
+    const base = prepareDocumentRecord([example('one')])
+    const enriched = prepareDocumentRecord(
+      [example('one')],
+      undefined,
+      { type: 'object' },
+      [{ pointer: '/id', description: 'Identifier' }],
+    )
+    expect(enriched.totalSize).toBeGreaterThan(base.totalSize)
+  })
 })

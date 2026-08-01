@@ -1,6 +1,7 @@
 import {
   assertValidDocumentContract,
   assertValidDocumentExamples,
+  parseContractOverrides,
 } from './document'
 import {
   MAX_DOCUMENT_BYTES,
@@ -8,7 +9,16 @@ import {
   MAX_EXAMPLE_BYTES,
   getUtf8Size,
 } from './document-limits'
-import type { JsonContract, JsonDocumentExample } from './document'
+import {
+  normalizeJsonSchema,
+  validateExamplesAgainstSchema,
+} from './json-schema'
+import type {
+  ContractOverrides,
+  JsonContract,
+  JsonDocumentExample,
+  JsonSchema,
+} from './document'
 
 export type PreparedDocumentRecord = {
   data: string
@@ -33,6 +43,8 @@ function validateExampleData(data: string): number {
 export function prepareDocumentRecord(
   examples: Array<JsonDocumentExample>,
   contract?: JsonContract,
+  jsonSchema?: JsonSchema,
+  contractOverrides: ContractOverrides = [],
 ): PreparedDocumentRecord {
   assertValidDocumentExamples(examples)
   if (examples.length > MAX_EXAMPLES_PER_DOCUMENT) {
@@ -43,10 +55,19 @@ export function prepareDocumentRecord(
 
   for (const example of examples) validateExampleData(example.data)
   if (contract) assertValidDocumentContract(contract)
+  parseContractOverrides(contractOverrides)
+  if (jsonSchema) {
+    const normalizedSchema = normalizeJsonSchema(jsonSchema)
+    if (validateExamplesAgainstSchema(examples, normalizedSchema).length > 0) {
+      throw new Error('All examples must satisfy the contract')
+    }
+  }
 
   const data = examples[0].data
   const size = getUtf8Size(data)
-  const totalSize = getUtf8Size(JSON.stringify({ examples, contract }))
+  const totalSize = getUtf8Size(
+    JSON.stringify({ examples, contract, jsonSchema, contractOverrides }),
+  )
   if (totalSize > MAX_DOCUMENT_BYTES) {
     throw new Error(
       `Document too large: ${totalSize} bytes (max ${MAX_DOCUMENT_BYTES})`,

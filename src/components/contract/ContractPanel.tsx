@@ -1,5 +1,6 @@
 import { ContractFieldReferenceItem } from './ContractFieldRow'
 import type { JsonContract, JsonContractField } from '@shared/document'
+import type { SchemaValidationDiagnostic } from '@shared/json-schema'
 import { Accordion } from '@/components/ui/accordion'
 import {
   Empty,
@@ -14,6 +15,7 @@ type ContractPanelProps = {
   contract?: JsonContract
   disabled?: boolean
   onChange: (contract: JsonContract) => void
+  schemaDiagnostics?: Array<SchemaValidationDiagnostic>
 }
 
 function getImmediateChildCount(
@@ -33,6 +35,7 @@ export function ContractPanel({
   contract,
   disabled = false,
   onChange,
+  schemaDiagnostics = [],
 }: ContractPanelProps) {
   const fields = contract?.fields ?? []
   const rows = buildContractDisplayRows(fields)
@@ -65,7 +68,7 @@ export function ContractPanel({
 
       {!disabled && fields.length > 0 && (
         <p className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          Inferred from saved examples. Edit field metadata only.
+          Inferred from all examples. Edited constraints remain authoritative.
         </p>
       )}
 
@@ -94,6 +97,10 @@ export function ContractPanel({
                     isContainer ? getImmediateChildCount(field, fields) : 0
                   }
                   onChange={updateField}
+                  schemaDiagnostics={schemaDiagnostics.filter(
+                    (diagnostic) =>
+                      diagnostic.fieldPointer === field.schemaPointer,
+                  )}
                 />
               ))}
             </Accordion>

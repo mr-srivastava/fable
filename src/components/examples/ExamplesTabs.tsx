@@ -11,6 +11,7 @@ type ExamplesTabsProps = {
   onRename: (id: string, name: string) => void
   onAdd: () => void
   onDelete: (id: string) => void
+  validationCounts: Record<string, number>
 }
 
 export function ExamplesTabs({
@@ -20,6 +21,7 @@ export function ExamplesTabs({
   onRename,
   onAdd,
   onDelete,
+  validationCounts,
 }: ExamplesTabsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2" role="tablist">
@@ -57,7 +59,17 @@ export function ExamplesTabs({
                 onFocus={() => onSelect(example.id)}
                 onClick={(event) => event.stopPropagation()}
               />
+              {(validationCounts[example.id] ?? 0) > 0 && (
+                <span className="sr-only">
+                  {validationCounts[example.id]} contract violations
+                </span>
+              )}
             </div>
+            {(validationCounts[example.id] ?? 0) > 0 && (
+              <span className="rounded-full bg-destructive px-1.5 text-[0.65rem] font-semibold text-destructive-foreground">
+                {validationCounts[example.id]}
+              </span>
+            )}
             <Button
               type="button"
               variant="ghost"

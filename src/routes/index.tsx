@@ -56,6 +56,16 @@ function CreateDocument() {
             change: editor.updateContract,
             disabled: editor.draft.contractDisabled,
             diagnostics: editor.draft.diagnostics,
+            schemaDiagnostics: editor.draft.schemaDiagnostics,
+            inferenceStatus: editor.draft.inferenceStatus,
+            inferenceError: editor.draft.inferenceError,
+          }}
+          exports={{
+            jsonSchema: editor.draft.jsonSchema
+              ? `${JSON.stringify(editor.draft.jsonSchema, null, 2)}\n`
+              : undefined,
+            generateTypeScript: editor.generateTypeScript,
+            disabled: !editor.canSubmit,
           }}
         />
       </div>

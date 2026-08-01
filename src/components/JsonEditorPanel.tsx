@@ -189,6 +189,57 @@ function ContractDiagnosticsNotice({
   )
 }
 
+function SchemaStatusNotice({
+  contract,
+  examples,
+}: Pick<JsonEditorPanelProps, 'contract' | 'examples'>) {
+  if (contract.inferenceStatus === 'pending') {
+    return (
+      <Alert>
+        <AlertTitle>Inferring contract</AlertTitle>
+        <AlertDescription>
+          Specimen is updating the JSON Schema from all valid examples.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+  if (contract.inferenceStatus === 'error') {
+    const invalidJson = contract.inferenceError?.includes('valid JSON')
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>
+          {invalidJson ? 'Invalid JSON' : 'Invalid contract'}
+        </AlertTitle>
+        <AlertDescription>
+          {contract.inferenceError ?? 'The contract could not be generated.'}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+  if (contract.schemaDiagnostics.length === 0) return null
+
+  const names = new Map(
+    examples.items.map((example) => [example.id, example.name]),
+  )
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>Examples violate the contract</AlertTitle>
+      <AlertDescription>
+        <ul className="list-disc space-y-1 pl-4">
+          {contract.schemaDiagnostics.slice(0, 5).map((diagnostic, index) => (
+            <li
+              key={`${diagnostic.exampleId}:${diagnostic.schemaPath}:${index}`}
+            >
+              {names.get(diagnostic.exampleId) ?? diagnostic.exampleId}:{' '}
+              <code>{diagnostic.instancePath || '/'}</code> {diagnostic.message}
+            </li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
 function PayloadPanel({
   value,
   onChange,
@@ -201,6 +252,7 @@ function PayloadPanel({
   onAddExample,
   onDeleteExample,
   hasUnsavedChanges,
+  validationCounts,
 }: JsonEditorGridProps & {
   status: PayloadStatus
   examples: JsonEditorPanelProps['examples']['items']
@@ -210,6 +262,7 @@ function PayloadPanel({
   onAddExample: () => void
   onDeleteExample: (id: string) => void
   hasUnsavedChanges?: boolean
+  validationCounts: Record<string, number>
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -234,6 +287,7 @@ function PayloadPanel({
         onRename={onRenameExample}
         onAdd={onAddExample}
         onDelete={onDeleteExample}
+        validationCounts={validationCounts}
       />
       <Tabs defaultValue="editor" className="gap-3">
         <TabsList>
@@ -298,6 +352,14 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const isCreate = mode === 'create'
   const description =
     descriptionProp ?? (isCreate ? CREATE_DEFAULTS.description : undefined)
+  const validationCounts = Object.fromEntries(
+    examples.items.map((example) => [
+      example.id,
+      contract.schemaDiagnostics.filter(
+        (diagnostic) => diagnostic.exampleId === example.id,
+      ).length,
+    ]),
+  )
 
   return (
     <>
@@ -307,6 +369,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           title={title}
           description={description}
         />
+        <SchemaStatusNotice contract={contract} examples={examples} />
 
         <Tabs
           defaultValue="payload"
@@ -331,6 +394,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               onAddExample={examples.add}
               onDeleteExample={examples.remove}
               hasUnsavedChanges={hasUnsavedChanges}
+              validationCounts={validationCounts}
             />
           </TabsContent>
           <TabsContent value="formatted">
@@ -345,6 +409,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               contract={contract.value}
               disabled={contract.disabled}
               onChange={contract.change}
+              schemaDiagnostics={contract.schemaDiagnostics}
             />
           </TabsContent>
         </Tabs>
@@ -366,6 +431,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               onAddExample={examples.add}
               onDeleteExample={examples.remove}
               hasUnsavedChanges={hasUnsavedChanges}
+              validationCounts={validationCounts}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -379,6 +445,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
                 contract={contract.value}
                 disabled={contract.disabled}
                 onChange={contract.change}
+                schemaDiagnostics={contract.schemaDiagnostics}
               />
             </div>
           </ResizablePanel>
@@ -388,6 +455,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         onSubmit={actions.submit}
         onReset={actions.reset}
         disabled={!validation.canSubmit}
+        exports={props.exports}
         {...(mode === 'view'
           ? {
               mode: 'view',

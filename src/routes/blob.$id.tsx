@@ -1,8 +1,13 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { parseDocumentId, parseJsonContract } from '@shared/document'
+import {
+  parseContractOverrides,
+  parseDocumentId,
+  parseJsonContract,
+} from '@shared/document'
 import { api } from '../../convex/_generated/api'
+import type { JsonSchema } from '@shared/document'
 import type { Doc, Id } from '../../convex/_generated/dataModel'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentDraft } from '@/hooks/use-document-draft'
@@ -37,6 +42,10 @@ function DocumentEditor({
       createDocumentDraft(
         normalizeDocumentExamples(document),
         document.contract ? parseJsonContract(document.contract) : undefined,
+        document.jsonSchema as JsonSchema | undefined,
+        document.contractOverrides
+          ? parseContractOverrides(document.contractOverrides)
+          : [],
       ),
     [document],
   )
@@ -111,6 +120,16 @@ function DocumentEditor({
             change: editor.updateContract,
             disabled: editor.draft.contractDisabled,
             diagnostics: editor.draft.diagnostics,
+            schemaDiagnostics: editor.draft.schemaDiagnostics,
+            inferenceStatus: editor.draft.inferenceStatus,
+            inferenceError: editor.draft.inferenceError,
+          }}
+          exports={{
+            jsonSchema: editor.draft.jsonSchema
+              ? `${JSON.stringify(editor.draft.jsonSchema, null, 2)}\n`
+              : undefined,
+            generateTypeScript: editor.generateTypeScript,
+            disabled: !editor.canSubmit,
           }}
         />
       </div>

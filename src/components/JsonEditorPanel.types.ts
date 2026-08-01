@@ -1,5 +1,7 @@
 import type { JsonContract, JsonDocumentExample } from '@shared/document'
 import type { ContractDiagnostics } from '@/lib/contract/inferContract'
+import type { SchemaValidationDiagnostic } from '@shared/json-schema'
+import type { ContractInferenceStatus } from '@/lib/document-draft'
 
 export type ExamplesEditorProps = {
   items: Array<JsonDocumentExample>
@@ -15,6 +17,9 @@ export type ContractEditorProps = {
   change: (contract: JsonContract) => void
   disabled: boolean
   diagnostics?: ContractDiagnostics
+  schemaDiagnostics: Array<SchemaValidationDiagnostic>
+  inferenceStatus: ContractInferenceStatus
+  inferenceError?: string
 }
 
 export type EditorActionsProps = {
@@ -36,6 +41,11 @@ type BaseProps = {
   title?: string
   description?: string
   hasUnsavedChanges?: boolean
+  exports: {
+    jsonSchema?: string
+    generateTypeScript: () => Promise<string>
+    disabled: boolean
+  }
 }
 
 export type JsonEditorPanelHeaderProps = Pick<
@@ -49,6 +59,7 @@ export type DocumentEditorActionsProps = {
   onSubmit: () => Promise<void>
   onReset: () => void
   disabled: boolean
+  exports: BaseProps['exports']
 } & (
   | { mode: 'create' }
   | {

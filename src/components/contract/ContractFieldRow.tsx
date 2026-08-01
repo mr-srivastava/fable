@@ -1,5 +1,6 @@
 import { EnumValuesInput } from './EnumValuesInput'
 import type { JsonContractField } from '@shared/document'
+import type { SchemaValidationDiagnostic } from '@shared/json-schema'
 import {
   AccordionContent,
   AccordionItem,
@@ -25,6 +26,7 @@ type ContractFieldRowProps = {
   isContainer: boolean
   childCount?: number
   onChange: (field: JsonContractField) => void
+  schemaDiagnostics?: Array<SchemaValidationDiagnostic>
 }
 
 export function ContractFieldReferenceItem({
@@ -34,6 +36,7 @@ export function ContractFieldReferenceItem({
   isContainer,
   childCount = 0,
   onChange,
+  schemaDiagnostics = [],
 }: ContractFieldRowProps) {
   const isEditable = !isContainer
 
@@ -71,6 +74,12 @@ export function ContractFieldReferenceItem({
             <Badge variant={isContainer ? 'outline' : 'secondary'}>
               {field.type}
             </Badge>
+            {schemaDiagnostics.length > 0 && (
+              <Badge variant="destructive">
+                {schemaDiagnostics.length} issue
+                {schemaDiagnostics.length === 1 ? '' : 's'}
+              </Badge>
+            )}
             {isContainer && childCount > 0 && (
               <span className="hidden text-xs font-normal text-muted-foreground sm:inline">
                 {childCount} child{childCount === 1 ? '' : 'ren'}

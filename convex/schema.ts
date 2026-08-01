@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import {
+  contractFieldOverrideValidator,
   documentContractValidator,
   documentExampleValidator,
 } from './documentModel'
@@ -14,5 +15,7 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
     metadata: v.optional(v.object({ version: v.number() })),
     contract: v.optional(documentContractValidator),
+    jsonSchema: v.optional(v.any()),
+    contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
   }),
 })

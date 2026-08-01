@@ -23,7 +23,8 @@ legacy `data` field so older readers and `GET /api/blob/:id` continue to work.
 
 ## Contract
 
-A contract is inferred from all valid examples. Each field records:
+A contract is inferred from all valid examples as JSON Schema Draft 7. The
+editor derives a flattened compatibility view in which each field records:
 
 - Its dot-separated path.
 - Its inferred JSON type.
@@ -32,15 +33,20 @@ A contract is inferred from all valid examples. Each field records:
 - Optional user-authored enumerated values.
 - An optional user-authored description.
 
-When examples change, inference replaces structural facts while preserving the
-description and enumerated values for paths that still exist.
+Quicktype performs inference in a debounced browser worker. Ajv validates every
+example against the effective schema before the document can be saved.
+
+Field edits are stored as overrides keyed by JSON Pointer. Requiredness,
+nullability, enumerated values, and descriptions remain authoritative when
+examples change. Re-inference replaces unedited structural facts, reapplies
+overrides for paths that still exist, and drops overrides for removed paths.
 
 Invalid JSON temporarily disables inference. The draft retains the last valid
-contract so a temporary editing error doesn't destroy annotations.
+schema and overrides so a temporary editing error doesn't destroy annotations.
 
 ## Compatibility diagnostics
 
-Contract diagnostics compare paths and top-level fields across examples. Shared
+Compatibility diagnostics compare paths and top-level fields across examples. Shared
 envelope fields or discriminator fields suppress false-positive divergence
 warnings. Otherwise, sufficiently dissimilar examples with many optional
 fields are grouped and shown as likely separate contracts.
@@ -73,7 +79,9 @@ fields whenever possible.
 
 ## Legacy records
 
-Records created by older versions may contain only `data`, `size`, and metadata.
-The frontend normalizes those records into a single default example. New
-optional fields must preserve that read path until a deliberate migration and
-deprecation process removes it.
+Records created by older versions may contain a flattened `contract` or only
+`data`, `size`, and metadata. The frontend normalizes data-only records into a
+single default example and infers missing JSON Schema in the browser. Matching
+legacy descriptions and enumerated values become overrides. The next successful
+save writes metadata version 2, `jsonSchema`, `contractOverrides`, and the
+flattened compatibility contract. No background migration is required.

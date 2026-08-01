@@ -3,6 +3,7 @@ import { MAX_EXAMPLES_PER_DOCUMENT } from '@shared/document-limits'
 import type { JsonDocumentExample } from '@shared/document'
 import {
   addDraftExample,
+  applyDraftInference,
   createDocumentDraft,
   getActiveExample,
   getDocumentDraftSnapshot,
@@ -12,6 +13,7 @@ import {
   updateDraftContract,
   updateDraftExample,
 } from '@/lib/document-draft'
+import { inferJsonSchema } from '@/lib/contract/quicktype'
 
 function example(id: string, value: unknown): JsonDocumentExample {
   return {
@@ -22,9 +24,17 @@ function example(id: string, value: unknown): JsonDocumentExample {
   }
 }
 
+async function readyDraft(examples: Array<JsonDocumentExample>) {
+  const draft = createDocumentDraft(examples)
+  return applyDraftInference(
+    draft,
+    await inferJsonSchema(examples.map((item) => item.data)),
+  )
+}
+
 describe('document draft', () => {
-  it('updates examples and preserves editable contract metadata', () => {
-    const initial = createDocumentDraft([example('one', { id: '1' })])
+  it('updates examples and preserves editable contract metadata', async () => {
+    const initial = await readyDraft([example('one', { id: '1' })])
     const idField = initial.contract?.fields.find(
       (field) => field.path === 'id',
     )
@@ -40,11 +50,15 @@ describe('document draft', () => {
         },
       ],
     })
-    const updated = updateDraftExample(
+    const changed = updateDraftExample(
       annotated,
       'one',
       JSON.stringify({ id: '2', name: 'Avery' }),
       2,
+    )
+    const updated = applyDraftInference(
+      changed,
+      await inferJsonSchema(changed.examples.map((item) => item.data)),
     )
 
     expect(
@@ -102,14 +116,16 @@ describe('document draft', () => {
     expect(renamed.contract).toBe(initial.contract)
   })
 
-  it('prepares one canonical persistence input', () => {
-    const draft = createDocumentDraft([
+  it('prepares one canonical persistence input', async () => {
+    const draft = await readyDraft([
       example('one', { id: '1' }),
       example('two', { id: '2' }),
     ])
 
     expect(prepareDocumentWrite(draft)).toMatchObject({
       examples: draft.examples,
+      jsonSchema: draft.jsonSchema,
+      contractOverrides: draft.contractOverrides,
     })
   })
 
@@ -119,6 +135,37 @@ describe('document draft', () => {
 
     expect(() => prepareDocumentWrite(invalid)).toThrow(
       'All examples must contain valid JSON',
+    )
+  })
+
+  it('treats edited enum values as authoritative constraints', async () => {
+    const initial = await readyDraft([example('one', { status: 'ok' })])
+    const field = initial.contract!.fields.find(
+      (item) => item.path === 'status',
+    )!
+    const constrained = updateDraftContract(initial, {
+      ...initial.contract!,
+      fields: initial.contract!.fields.map((item) =>
+        item.path === 'status' ? { ...field, enumValues: ['error'] } : item,
+      ),
+    })
+
+    expect(constrained.schemaDiagnostics).toEqual([
+      expect.objectContaining({ exampleId: 'one', fieldPointer: '/status' }),
+    ])
+    expect(() => prepareDocumentWrite(constrained)).toThrow(
+      'All examples must satisfy the contract',
+    )
+  })
+
+  it('marks changed examples pending while retaining the last schema', async () => {
+    const initial = await readyDraft([example('one', { id: 1 })])
+    const changed = updateDraftExample(initial, 'one', '{"id":2}', 2)
+
+    expect(changed.inferenceStatus).toBe('pending')
+    expect(changed.jsonSchema).toBe(initial.jsonSchema)
+    expect(() => prepareDocumentWrite(changed)).toThrow(
+      'Contract inference is not complete',
     )
   })
 

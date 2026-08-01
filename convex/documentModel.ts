@@ -10,6 +10,7 @@ export const documentExampleValidator = v.object({
 
 export const contractFieldValidator = v.object({
   path: v.string(),
+  schemaPointer: v.optional(v.string()),
   type: v.union(
     v.literal('string'),
     v.literal('number'),
@@ -30,6 +31,14 @@ export const documentContractValidator = v.object({
   fields: v.array(contractFieldValidator),
 })
 
+export const contractFieldOverrideValidator = v.object({
+  pointer: v.string(),
+  required: v.optional(v.boolean()),
+  nullable: v.optional(v.boolean()),
+  enumValues: v.optional(v.array(v.string())),
+  description: v.optional(v.string()),
+})
+
 export const documentValidator = v.object({
   _id: v.id('documents'),
   _creationTime: v.number(),
@@ -44,4 +53,6 @@ export const documentValidator = v.object({
     }),
   ),
   contract: v.optional(documentContractValidator),
+  jsonSchema: v.optional(v.any()),
+  contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
 })
