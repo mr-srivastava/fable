@@ -1,9 +1,9 @@
+import { quicktype } from 'quicktype-core/dist/esm/Run.js'
 import {
   InputData,
-  JSONSchemaInput,
   jsonInputForTargetLanguage,
-  quicktype,
-} from 'quicktype-core'
+} from 'quicktype-core/dist/esm/input/Inputs.js'
+import { JSONSchemaInput } from 'quicktype-core/dist/esm/input/JSONSchemaInput.js'
 import { normalizeJsonSchema } from '../../../shared/json-schema'
 import type { JsonSchema } from '@shared/document'
 
