@@ -1,6 +1,6 @@
+import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { ComponentProps } from 'react'
-import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -14,9 +14,9 @@ type CopyButtonProps = Omit<
   ariaLabel?: string
   onClick?: ComponentProps<typeof Button>['onClick']
 } & (
-  | { text: string; getText?: never }
-  | { text?: never; getText: () => string | Promise<string> }
-)
+    | { text: string; getText?: never }
+    | { text?: never; getText: () => string | Promise<string> }
+  )
 
 export function CopyButton({
   text,

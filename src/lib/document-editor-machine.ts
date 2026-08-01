@@ -20,8 +20,7 @@ import {
 import { createDocumentExample } from '@/lib/document-examples'
 
 export type DocumentPersistenceResult =
-  | { type: 'created'; documentId: string }
-  | { type: 'updated' }
+  { type: 'created'; documentId: string } | { type: 'updated' }
 
 export type DocumentEditorDependencies = {
   inferContract: (

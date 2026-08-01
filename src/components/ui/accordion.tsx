@@ -3,16 +3,11 @@ import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion'
 
 import { cn } from '@/lib/utils'
 
-function Accordion({
-  ...props
-}: AccordionPrimitive.Root.Props) {
+function Accordion({ ...props }: AccordionPrimitive.Root.Props) {
   return <AccordionPrimitive.Root data-slot="accordion" {...props} />
 }
 
-function AccordionItem({
-  className,
-  ...props
-}: AccordionPrimitive.Item.Props) {
+function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"

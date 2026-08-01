@@ -37,10 +37,7 @@ export type SubmissionViewState =
   | {
       status: 'unavailable'
       reason:
-        | 'invalidJson'
-        | 'inferring'
-        | 'invalidContract'
-        | 'contractViolations'
+        'invalidJson' | 'inferring' | 'invalidContract' | 'contractViolations'
     }
   | { status: 'saving' }
   | { status: 'failed'; message: string }
