@@ -51,14 +51,17 @@ export function CopySnippetMenuItems({ pageUrl, apiUrl }: CopySnippetProps) {
   return (
     <>
       {(['url', 'curl', 'fetch'] as const).map((type) => (
-        <DropdownMenuItem key={type} asChild>
-          <CopyButton
-            text={getSnippet(type, pageUrl, apiUrl)}
-            label={SNIPPET_LABELS[type]}
-            variant="ghost"
-            className="w-full justify-start"
-          />
-        </DropdownMenuItem>
+        <DropdownMenuItem
+          key={type}
+          render={
+            <CopyButton
+              text={getSnippet(type, pageUrl, apiUrl)}
+              label={SNIPPET_LABELS[type]}
+              variant="ghost"
+              className="w-full justify-start"
+            />
+          }
+        />
       ))}
     </>
   )

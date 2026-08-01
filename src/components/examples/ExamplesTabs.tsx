@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { JsonDocumentExample } from '@shared/document'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 
 type ExamplesTabsProps = {
   examples: Array<JsonDocumentExample>
@@ -42,6 +43,7 @@ export function ExamplesTabs({
   const [draftName, setDraftName] = useState(activeExample.name)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
   const cancelRenameRef = useRef(false)
+  const beginRenameRef = useRef(false)
 
   useEffect(() => {
     setRenaming(false)
@@ -115,24 +117,30 @@ export function ExamplesTabs({
                 </TabsTrigger>
 
                 {isActive && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="absolute right-1"
-                        aria-label={`Actions for ${example.name}`}
-                      >
-                        <MoreHorizontal />
-                      </Button>
+                  <DropdownMenu
+                    onOpenChangeComplete={(open) => {
+                      if (!open && beginRenameRef.current) {
+                        beginRenameRef.current = false
+                        requestAnimationFrame(() => setRenaming(true))
+                      }
+                    }}
+                  >
+                    <DropdownMenuTrigger
+                      type="button"
+                      className={cn(
+                        buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                        'absolute right-1',
+                      )}
+                      aria-label={`Actions for ${example.name}`}
+                    >
+                      <MoreHorizontal />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-48">
                       <DropdownMenuGroup>
                         <DropdownMenuItem
                           onSelect={() => {
                             setDraftName(example.name)
-                            requestAnimationFrame(() => setRenaming(true))
+                            beginRenameRef.current = true
                           }}
                         >
                           <Pencil />

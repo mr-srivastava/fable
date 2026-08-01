@@ -1,6 +1,6 @@
 import { Download, FileCode2 } from 'lucide-react'
 import type { ExportViewState } from '@/lib/document-editor-model'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { CopyButton } from '@/components/CopyButton'
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
 type DocumentExportMenuProps = {
   state: ExportViewState
@@ -46,17 +47,19 @@ export function DocumentExportMenuItems({
   return (
     <DropdownMenuGroup>
       {jsonSchema && (
-        <DropdownMenuItem asChild>
-          <CopyButton
-            text={jsonSchema}
-            label="Copy JSON Schema"
-            ariaLabel="Copy JSON Schema"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-            disabled={disabled}
-          />
-        </DropdownMenuItem>
+        <DropdownMenuItem
+          render={
+            <CopyButton
+              text={jsonSchema}
+              label="Copy JSON Schema"
+              ariaLabel="Copy JSON Schema"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
+              disabled={disabled}
+            />
+          }
+        />
       )}
       <DropdownMenuItem
         disabled={disabled}
@@ -71,17 +74,19 @@ export function DocumentExportMenuItems({
       >
         <Download /> Download JSON Schema
       </DropdownMenuItem>
-      <DropdownMenuItem asChild>
-        <CopyButton
-          getText={generateTypeScript}
-          label="Copy TypeScript"
-          ariaLabel="Copy TypeScript"
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start"
-          disabled={disabled || generating}
-        />
-      </DropdownMenuItem>
+      <DropdownMenuItem
+        render={
+          <CopyButton
+            getText={generateTypeScript}
+            label="Copy TypeScript"
+            ariaLabel="Copy TypeScript"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+            disabled={disabled || generating}
+          />
+        }
+      />
       <DropdownMenuItem
         disabled={disabled || generating}
         onSelect={() =>
@@ -107,11 +112,13 @@ export function DocumentExportMenu(props: DocumentExportMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" disabled={disabled}>
-          <FileCode2 />
-          {generating ? 'Generating…' : 'Export'}
-        </Button>
+      <DropdownMenuTrigger
+        type="button"
+        disabled={disabled}
+        className={cn(buttonVariants({ variant: 'outline' }))}
+      >
+        <FileCode2 />
+        {generating ? 'Generating…' : 'Export'}
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="min-w-52">
         <DocumentExportMenuItems {...props} />

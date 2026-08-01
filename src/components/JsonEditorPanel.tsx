@@ -334,18 +334,20 @@ function PayloadPanel({
           <div className="flex justify-end">
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={handleFormat}
-                    disabled={!canFormat}
-                    aria-label="Format JSON"
-                    aria-keyshortcuts="Alt+Shift+F"
-                  >
-                    <Braces />
-                  </Button>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={handleFormat}
+                      disabled={!canFormat}
+                      aria-label="Format JSON"
+                      aria-keyshortcuts="Alt+Shift+F"
+                    />
+                  }
+                >
+                  <Braces />
                 </TooltipTrigger>
                 <TooltipContent>
                   Format JSON <span className="ml-1 opacity-70">⇧⌥F</span>

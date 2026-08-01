@@ -19,8 +19,13 @@ export default function Header() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {!isCreateRoute && (
-            <Button asChild variant="default" size="sm">
-              <Link to="/">New specimen</Link>
+            <Button
+              render={<Link to="/" />}
+              nativeButton={false}
+              variant="default"
+              size="sm"
+            >
+              New specimen
             </Button>
           )}
         </div>

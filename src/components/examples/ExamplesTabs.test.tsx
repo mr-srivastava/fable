@@ -54,7 +54,9 @@ describe('ExamplesTabs', () => {
     await user.click(
       screen.getByRole('button', { name: 'Actions for Success' }),
     )
-    await user.click(screen.getByRole('menuitem', { name: 'Rename “Success”' }))
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Rename “Success”' }),
+    )
     const input = await screen.findByRole('textbox', { name: 'Example name' })
     await user.clear(input)
     await user.type(input, 'Primary{Enter}')
@@ -73,7 +75,7 @@ describe('ExamplesTabs', () => {
       screen.getByRole('button', { name: 'Actions for Success' }),
     )
     expect(
-      screen.getByRole('menuitem', { name: 'Delete “Success”' }),
+      await screen.findByRole('menuitem', { name: 'Delete “Success”' }),
     ).toHaveAttribute('aria-disabled', 'true')
     expect(
       screen.getByText('A specimen needs at least one example.'),
@@ -107,7 +109,9 @@ describe('ExamplesTabs', () => {
     await user.click(
       screen.getByRole('button', { name: 'Actions for Success' }),
     )
-    await user.click(screen.getByRole('menuitem', { name: 'Delete “Success”' }))
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Delete “Success”' }),
+    )
 
     expect(props.onDelete).toHaveBeenCalledWith('one')
   })

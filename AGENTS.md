@@ -73,6 +73,27 @@ Follow these rules when implementing:
 - Do not add a port or adapter interface until at least two implementations are
   justified, normally production and test implementations.
 
+## Testing strategy
+
+Test behavior that Specimen owns at the narrowest stable public interface.
+Keep tests resilient to implementation changes in frameworks and component
+libraries.
+
+- Test domain transitions and validation in their owning pure modules.
+- Test component behavior through user-visible product interactions, such as
+  selecting an example, renaming it, or invoking an export action.
+- Do not add tests for unmodified third-party or shadcn primitive behavior.
+  Cover a primitive through its product-level consumer instead.
+- Add a focused UI primitive test only when the wrapper contains substantial
+  Specimen-owned behavior, exposes a compatibility contract used by multiple
+  consumers, or fixes a regression that cannot be exercised clearly through a
+  product component.
+- Assert roles, labels, visible state, and callbacks. Avoid assertions about
+  generated DOM structure, library-specific data attributes, or animation
+  timing unless Specimen explicitly depends on them.
+- For a component-library migration, update existing product tests and add only
+  the smallest regression test that demonstrates a Specimen behavior at risk.
+
 ## Domain invariants
 
 Preserve these invariants unless the task explicitly changes them:

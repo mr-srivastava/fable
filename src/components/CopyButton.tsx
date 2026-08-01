@@ -1,17 +1,18 @@
 import { useState } from 'react'
+import type { ComponentProps } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const COPY_RESET_MS = 2000
 
-type CopyButtonProps = {
+type CopyButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  'children' | 'onClick'
+> & {
   label: string
   ariaLabel?: string
-  variant?: 'outline' | 'ghost' | 'default'
-  size?: 'default' | 'sm' | 'icon' | 'icon-sm'
-  className?: string
-  disabled?: boolean
+  onClick?: ComponentProps<typeof Button>['onClick']
 } & (
   | { text: string; getText?: never }
   | { text?: never; getText: () => string | Promise<string> }
@@ -26,12 +27,19 @@ export function CopyButton({
   className,
   disabled = false,
   getText,
+  onClick,
+  ...buttonProps
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
   const [copying, setCopying] = useState(false)
 
-  const handleCopy = async () => {
+  const handleCopy = async (
+    event: Parameters<NonNullable<CopyButtonProps['onClick']>>[0],
+  ) => {
+    onClick?.(event)
+    if (event.defaultPrevented) return
+
     setCopyError(false)
     setCopying(true)
     try {
@@ -48,6 +56,7 @@ export function CopyButton({
 
   return (
     <Button
+      {...buttonProps}
       type="button"
       variant={variant}
       size={size}

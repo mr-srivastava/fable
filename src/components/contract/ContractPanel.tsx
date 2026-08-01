@@ -99,7 +99,7 @@ export function ContractPanel({
           </Empty>
         ) : (
           <ScrollArea className="h-[min(34rem,calc(100vh-14rem))] min-h-0">
-            <Accordion type="multiple" className="w-full">
+            <Accordion multiple className="w-full">
               {rows.map(({ field, depth, label, isContainer }) => (
                 <ContractFieldReferenceItem
                   key={field.path}

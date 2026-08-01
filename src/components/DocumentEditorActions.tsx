@@ -1,6 +1,6 @@
 import { MoreHorizontal } from 'lucide-react'
 import type { DocumentEditorActionsProps } from './JsonEditorPanel.types'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { CopyButton } from '@/components/CopyButton'
 import { CopySnippet, CopySnippetMenuItems } from '@/components/CopySnippet'
 import { cn } from '@/lib/utils'
@@ -119,29 +119,30 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
             <SecondaryActions commands={commands} model={model} mode={mode} />
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="md:hidden"
-                aria-label="More specimen actions"
-              >
-                <MoreHorizontal />
-              </Button>
+            <DropdownMenuTrigger
+              type="button"
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'icon' }),
+                'md:hidden',
+              )}
+              aria-label="More specimen actions"
+            >
+              <MoreHorizontal />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="end" className="min-w-56">
               <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full justify-start"
-                    disabled={model.submission.status === 'saving'}
-                    onClick={commands.reset}
-                  >
-                    Reset
-                  </Button>
+                <DropdownMenuItem
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full justify-start"
+                      disabled={model.submission.status === 'saving'}
+                      onClick={commands.reset}
+                    />
+                  }
+                >
+                  Reset
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger
@@ -158,15 +159,17 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
                 </DropdownMenuSub>
                 {!isCreate && (
                   <>
-                    <DropdownMenuItem asChild>
-                      <CopyButton
-                        text={model.payload.value}
-                        label="JSON"
-                        ariaLabel="Copy saved JSON"
-                        variant="ghost"
-                        className="w-full justify-start"
-                      />
-                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <CopyButton
+                          text={model.payload.value}
+                          label="JSON"
+                          ariaLabel="Copy saved JSON"
+                          variant="ghost"
+                          className="w-full justify-start"
+                        />
+                      }
+                    />
                     <CopySnippetMenuItems
                       pageUrl={mode.documentUrl}
                       apiUrl={mode.apiUrl}
