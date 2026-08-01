@@ -95,6 +95,19 @@ Components retain local state only for visual interaction, such as expanded
 diagnostics or an enum input draft. Workflow state and asynchronous errors live
 in the editor machine.
 
+CodeMirror owns editor mechanics, including its incremental JSON syntax tree,
+source ranges, completion UI, diagnostic markers, tooltips, keybindings, and
+undo-aware transactions. Adapters under `src/components/json-editor/` translate
+the document model into those CodeMirror extensions. They use canonical JSON
+and schema pointers for identity; dot-separated contract paths remain display
+labels only.
+
+The document editor model marks a retained contract separately from a current
+contract. Retained fields can provide reference hovers, but only current fields
+drive completions and contract diagnostics. Shared JSON Schema validation
+normalizes Ajv errors into Specimen-owned diagnostic codes and messages before
+presentation modules consume them.
+
 ## Shared domain modules
 
 The `shared/` directory is neutral code consumed by both the frontend and

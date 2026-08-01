@@ -16,7 +16,13 @@ import { parseJsonSafely } from '@/lib/json'
 export type PayloadViewState =
   | { status: 'waiting'; value: string; size: 0 }
   | { status: 'valid'; value: string; size: number }
-  | { status: 'invalid'; value: string; message: string; size?: number }
+  | {
+      status: 'invalid'
+      reason: 'syntax' | 'size'
+      value: string
+      message: string
+      size?: number
+    }
 
 export type ContractViewStatus =
   | { type: 'invalidJson' }
@@ -27,6 +33,7 @@ export type ContractViewStatus =
 
 export type ContractEditorViewModel = {
   value?: JsonContract
+  valueFreshness?: 'current' | 'retained'
   status: ContractViewStatus
   diagnostics?: ContractDiagnostics
   schemaDiagnostics: Array<SchemaValidationDiagnostic>
@@ -174,6 +181,7 @@ export function createDocumentEditorViewModel(
       ? { status: 'valid', value: activeExample.data, size: parsed.size }
       : {
           status: 'invalid',
+          reason: parsed.reason,
           value: activeExample.data,
           message: parsed.error,
           size: parsed.size,
@@ -196,6 +204,12 @@ export function createDocumentEditorViewModel(
     },
     contract: {
       value: draft.contract,
+      valueFreshness: draft.contract
+        ? snapshot.matches({ analysis: 'ready' }) ||
+          snapshot.matches({ analysis: 'violations' })
+          ? 'current'
+          : 'retained'
+        : undefined,
       status: getContractStatus(snapshot),
       diagnostics: draft.diagnostics,
       schemaDiagnostics: draft.schemaDiagnostics,

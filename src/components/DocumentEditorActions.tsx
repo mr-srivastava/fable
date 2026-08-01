@@ -60,16 +60,6 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
   const submitDisabled =
     model.submission.status === 'unavailable' ||
     model.submission.status === 'saving'
-  const submitUnavailableReason =
-    model.submission.status === 'unavailable'
-      ? {
-          invalidJson: 'Fix invalid JSON before saving.',
-          inferring: 'Wait for contract inference to finish.',
-          invalidContract: 'Fix the invalid contract before saving.',
-          contractViolations: 'Resolve contract violations before saving.',
-        }[model.submission.reason]
-      : undefined
-
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur supports-backdrop-filter:bg-background/85"
@@ -95,22 +85,11 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
                 ? 'Unsaved changes'
                 : 'Saved specimen'}
           </p>
-          {submitUnavailableReason && (
-            <p
-              id="submit-unavailable-reason"
-              className="mt-1 line-clamp-2 text-xs leading-tight text-destructive"
-            >
-              {submitUnavailableReason}
-            </p>
-          )}
         </div>
         <div className="flex shrink-0 items-center justify-end gap-2">
           <Button
             onClick={() => void commands.submit().catch(() => undefined)}
             disabled={submitDisabled}
-            aria-describedby={
-              submitUnavailableReason ? 'submit-unavailable-reason' : undefined
-            }
             className="transition-transform enabled:scale-[1.02] motion-reduce:enabled:scale-100"
           >
             {model.submission.status === 'saving' ? 'Saving…' : submitLabel}

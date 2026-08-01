@@ -2,6 +2,11 @@ import type {
   DocumentEditorCommands,
   DocumentEditorViewModel,
 } from '@/lib/document-editor-model'
+import type {
+  JsonEditorAssistance,
+  JsonEditorPathCoordination,
+  JsonEditorValidation,
+} from './json-editor/JsonEditor.types'
 
 type EditorMode =
   | { type: 'create' }
@@ -38,6 +43,8 @@ export type DocumentEditorActionsProps = {
 export type JsonEditorGridProps = {
   value: string
   onChange: (value: string) => void
-  error?: string
+  validation: JsonEditorValidation
   size?: number
+  assistance: JsonEditorAssistance
+  pathCoordination: JsonEditorPathCoordination
 }

@@ -7,7 +7,7 @@ import {
 } from '@/test/factories/document-editor'
 
 describe('DocumentEditorActions', () => {
-  it('shows the save blocker as visible, associated guidance', () => {
+  it('disables saving without repeating the editor error', () => {
     render(
       <DocumentEditorActions
         mode={{ type: 'create' }}
@@ -21,10 +21,10 @@ describe('DocumentEditorActions', () => {
 
     const create = screen.getByRole('button', { name: 'Create specimen' })
     expect(create).toBeDisabled()
-    expect(create).toHaveAccessibleDescription(
-      'Fix invalid JSON before saving.',
-    )
-    expect(screen.getByText('Fix invalid JSON before saving.')).toBeVisible()
+    expect(create).not.toHaveAccessibleDescription()
+    expect(
+      screen.queryByText('Fix invalid JSON before saving.'),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'More specimen actions' }),
     ).toBeInTheDocument()

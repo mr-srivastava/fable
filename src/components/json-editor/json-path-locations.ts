@@ -1,13 +1,21 @@
-import { jsonLanguage } from '@codemirror/lang-json'
+import type { syntaxTree } from '@codemirror/language'
 
-type JsonSyntaxTree = ReturnType<typeof jsonLanguage.parser.parse>
+type JsonSyntaxTree = ReturnType<typeof syntaxTree>
 type JsonSyntaxNode = JsonSyntaxTree['topNode']
 
 export type JsonPathLocation = {
   path: string
+  instancePointer: string
+  schemaPointer: string
   from: number
   to: number
   anchor: number
+  valueFrom: number
+  valueTo: number
+}
+
+function escapeJsonPointerSegment(segment: string) {
+  return segment.replaceAll('~', '~0').replaceAll('/', '~1')
 }
 
 function decodePropertyName(
@@ -50,6 +58,8 @@ function collectFromValue(
   source: string,
   node: JsonSyntaxNode,
   path: string,
+  instancePointer: string,
+  schemaPointer: string,
   locations: Array<JsonPathLocation>,
 ) {
   if (node.name === 'Object') {
@@ -64,13 +74,26 @@ function collectFromValue(
 
         if (propertyName && value && segment !== null) {
           const propertyPath = path ? `${path}.${segment}` : segment
+          const propertyPointer = `${instancePointer}/${escapeJsonPointerSegment(segment)}`
+          const propertySchemaPointer = `${schemaPointer}/${escapeJsonPointerSegment(segment)}`
           locations.push({
             path: propertyPath,
+            instancePointer: propertyPointer,
+            schemaPointer: propertySchemaPointer,
             from: child.from,
             to: child.to,
             anchor: propertyName.from,
+            valueFrom: value.from,
+            valueTo: value.to,
           })
-          collectFromValue(source, value, propertyPath, locations)
+          collectFromValue(
+            source,
+            value,
+            propertyPath,
+            propertyPointer,
+            propertySchemaPointer,
+            locations,
+          )
         }
       }
       child = child.nextSibling
@@ -80,30 +103,49 @@ function collectFromValue(
 
   if (node.name === 'Array') {
     const itemPath = `${path}[]`
+    let index = 0
     let child = node.firstChild
     while (child) {
       if (child.name !== '[' && child.name !== ']' && child.name !== ',') {
+        const itemPointer = `${instancePointer}/${index}`
+        const itemSchemaPointer = `${schemaPointer}/*`
         locations.push({
           path: itemPath,
+          instancePointer: itemPointer,
+          schemaPointer: itemSchemaPointer,
           from: child.from,
           to: child.to,
           anchor: child.from,
+          valueFrom: child.from,
+          valueTo: child.to,
         })
-        collectFromValue(source, child, itemPath, locations)
+        collectFromValue(
+          source,
+          child,
+          itemPath,
+          itemPointer,
+          itemSchemaPointer,
+          locations,
+        )
+        index += 1
       }
       child = child.nextSibling
     }
   }
 }
 
-export function getJsonPathLocations(source: string): Array<JsonPathLocation> {
-  const tree = jsonLanguage.parser.parse(source)
+export function getJsonPathLocationsFromTree(
+  source: string,
+  tree: JsonSyntaxTree,
+): Array<JsonPathLocation> {
   if (hasSyntaxError(tree.topNode)) return []
 
   const locations: Array<JsonPathLocation> = []
   collectFromValue(
     source,
     tree.topNode.firstChild ?? tree.topNode,
+    '',
+    '',
     '',
     locations,
   )
@@ -114,9 +156,16 @@ export function findJsonPathAtPosition(
   locations: Array<JsonPathLocation>,
   position: number,
 ): string | undefined {
+  return findJsonLocationAtPosition(locations, position)?.path
+}
+
+export function findJsonLocationAtPosition(
+  locations: Array<JsonPathLocation>,
+  position: number,
+): JsonPathLocation | undefined {
   return locations
     .filter((location) => location.from <= position && position <= location.to)
-    .sort((left, right) => right.path.length - left.path.length)[0]?.path
+    .sort((left, right) => right.path.length - left.path.length)[0]
 }
 
 export function findJsonPathLocation(
@@ -124,4 +173,20 @@ export function findJsonPathLocation(
   path: string,
 ): JsonPathLocation | undefined {
   return locations.find((location) => location.path === path)
+}
+
+export function findJsonPointerLocation(
+  locations: Array<JsonPathLocation>,
+  instancePointer: string,
+): JsonPathLocation | undefined {
+  return locations.find(
+    (location) => location.instancePointer === instancePointer,
+  )
+}
+
+export function findJsonSchemaPointerLocation(
+  locations: Array<JsonPathLocation>,
+  schemaPointer: string,
+): JsonPathLocation | undefined {
+  return locations.find((location) => location.schemaPointer === schemaPointer)
 }

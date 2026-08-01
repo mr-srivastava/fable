@@ -75,9 +75,56 @@ describe('JSON Schema adapter', () => {
     )
     expect(diagnostics[0]).toMatchObject({
       exampleId: 'bad',
-      instancePath: '/id',
-      keyword: 'type',
+      instancePointer: '/id',
+      code: 'typeMismatch',
+      expected: 'string',
+      message: 'Expected string.',
     })
+  })
+
+  it('preserves allowed values for editor quick fixes', () => {
+    const diagnostics = validateExamplesAgainstSchema(
+      [example('bad', { id: 'unknown' })],
+      {
+        type: 'object',
+        properties: { id: { enum: ['known'] } },
+      },
+    )
+
+    expect(diagnostics[0]).toMatchObject({
+      code: 'enumMismatch',
+      allowedValues: ['known'],
+      message: 'Use one of the allowed values.',
+    })
+  })
+
+  it('normalizes required and unexpected-property diagnostics', () => {
+    const diagnostics = validateExamplesAgainstSchema(
+      [example('bad', { extra: true })],
+      {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+        additionalProperties: false,
+      },
+    )
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'missingProperty',
+          fieldPointer: '/id',
+          missingProperty: 'id',
+          message: 'Missing required property "id".',
+        }),
+        expect.objectContaining({
+          code: 'unexpectedProperty',
+          instancePointer: '/extra',
+          unexpectedProperty: 'extra',
+          message: 'Property "extra" is not allowed.',
+        }),
+      ]),
+    )
   })
 
   it('rejects remote references and malformed schemas', () => {

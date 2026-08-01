@@ -21,8 +21,8 @@ describe('ContractPanel path selection', () => {
     render(
       <ContractPanel
         contract={contract}
-        activePath="data.id"
-        activePathPresent={false}
+        activePointer="/data/id"
+        activePointerPresent={false}
         onOverrideChange={vi.fn()}
       />,
     )
@@ -37,16 +37,16 @@ describe('ContractPanel path selection', () => {
 
   it('selects a field from its contract row', async () => {
     const user = userEvent.setup()
-    const onSelectPath = vi.fn()
+    const onSelectPointer = vi.fn()
     render(
       <ContractPanel
         contract={contract}
-        onSelectPath={onSelectPath}
+        onSelectPointer={onSelectPointer}
         onOverrideChange={vi.fn()}
       />,
     )
 
     await user.click(screen.getByRole('button', { name: 'data.id' }))
-    expect(onSelectPath).toHaveBeenCalledWith('data.id')
+    expect(onSelectPointer).toHaveBeenCalledWith('/data/id')
   })
 })

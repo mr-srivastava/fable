@@ -18,9 +18,9 @@ type ContractPanelProps = {
   disabled?: boolean
   onOverrideChange: (change: ContractOverrideChange) => void
   schemaDiagnostics?: Array<SchemaValidationDiagnostic>
-  activePath?: string
-  activePathPresent?: boolean
-  onSelectPath?: (path: string) => void
+  activePointer?: string
+  activePointerPresent?: boolean
+  onSelectPointer?: (pointer: string) => void
 }
 
 function getImmediateChildCount(
@@ -41,23 +41,27 @@ export function ContractPanel({
   disabled = false,
   onOverrideChange,
   schemaDiagnostics = [],
-  activePath,
-  activePathPresent = true,
-  onSelectPath,
+  activePointer,
+  activePointerPresent = true,
+  onSelectPointer,
 }: ContractPanelProps) {
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
   const fields = contract?.fields ?? []
   const rows = buildContractDisplayRows(fields)
 
   useEffect(() => {
-    if (!activePath) return
-    rowRefs.current.get(activePath)?.scrollIntoView({
+    if (!activePointer) return
+    rowRefs.current.get(activePointer)?.scrollIntoView({
       block: 'nearest',
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto'
         : 'smooth',
     })
-  }, [activePath])
+  }, [activePointer])
+
+  const activeField = fields.find(
+    (field) => field.schemaPointer === activePointer,
+  )
 
   return (
     <section className="animate-fade-in-up-delay-2 flex min-h-0 flex-col gap-3">
@@ -67,9 +71,7 @@ export function ContractPanel({
             Contract Inspector
           </h2>
           <p className="text-sm text-muted-foreground">
-            {disabled
-              ? 'Valid JSON will infer inspectable fields here.'
-              : `${fields.length} field${fields.length === 1 ? '' : 's'} inferred from the current examples`}
+            Inspect and annotate fields inferred from the current examples.
           </p>
         </div>
       </div>
@@ -80,9 +82,9 @@ export function ContractPanel({
         </p>
       )}
 
-      {activePath && !activePathPresent && (
+      {activeField && !activePointerPresent && (
         <p role="status" className="text-xs text-muted-foreground">
-          <code>{activePath}</code> is not present in this example.
+          <code>{activeField.path}</code> is not present in this example.
         </p>
       )}
 
@@ -90,10 +92,13 @@ export function ContractPanel({
         {disabled || fields.length === 0 ? (
           <Empty className="min-h-32 border-0 py-8">
             <EmptyHeader>
-              <EmptyTitle>No contract fields</EmptyTitle>
+              <EmptyTitle>
+                {disabled ? 'Contract unavailable' : 'No contract fields'}
+              </EmptyTitle>
               <EmptyDescription>
-                Valid JSON will infer editable metadata for paths present in the
-                example.
+                {disabled
+                  ? 'Fix the invalid JSON in the active example to update the contract.'
+                  : 'Add fields to an example to infer editable metadata.'}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -102,17 +107,22 @@ export function ContractPanel({
             <Accordion multiple className="w-full">
               {rows.map(({ field, depth, label, isContainer }) => (
                 <ContractFieldReferenceItem
-                  key={field.path}
+                  key={field.schemaPointer ?? field.path}
                   rowRef={(node) => {
-                    if (node) rowRefs.current.set(field.path, node)
-                    else rowRefs.current.delete(field.path)
+                    const pointer = field.schemaPointer
+                    if (!pointer) return
+                    if (node) rowRefs.current.set(pointer, node)
+                    else rowRefs.current.delete(pointer)
                   }}
                   field={field}
                   depth={depth}
                   label={label}
                   isContainer={isContainer}
-                  selected={field.path === activePath}
-                  onSelect={() => onSelectPath?.(field.path)}
+                  selected={field.schemaPointer === activePointer}
+                  onSelect={() =>
+                    field.schemaPointer &&
+                    onSelectPointer?.(field.schemaPointer)
+                  }
                   childCount={
                     isContainer ? getImmediateChildCount(field, fields) : 0
                   }

@@ -1,13 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { JsonEditorPanel } from './JsonEditorPanel'
+import type { JsonEditorProps } from './json-editor/JsonEditor.types'
+import { formatJson } from '@/lib/json'
 import {
   buildDocumentEditorCommands,
   buildDocumentEditorModel,
 } from '@/test/factories/document-editor'
 
-vi.mock('@/components/JsonEditor', () => ({
-  JsonEditor: () => <div>JSON editor</div>,
+vi.mock('@/components/json-editor/JsonEditor', () => ({
+  JsonEditor: ({ value, onChange, validation }: JsonEditorProps) => (
+    <div>
+      JSON editor
+      <button
+        type="button"
+        aria-label="Format JSON"
+        disabled={validation.status !== 'valid' || value.trim() === ''}
+        onClick={() => onChange(formatJson(value))}
+      />
+    </div>
+  ),
 }))
 
 describe('JsonEditorPanel workspace hierarchy', () => {
@@ -80,15 +92,6 @@ describe('JsonEditorPanel workspace hierarchy', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Format JSON' }))
 
     expect(updateExample).toHaveBeenCalledWith('one', '{\n  "id": 1\n}')
-
-    updateExample.mockClear()
-    fireEvent.keyDown(screen.getByText('JSON editor'), {
-      altKey: true,
-      shiftKey: true,
-      key: 'F',
-    })
-
-    expect(updateExample).toHaveBeenCalledWith('one', '{\n  "id": 1\n}')
   })
 
   it('disables formatting when JSON is invalid', () => {
@@ -98,6 +101,7 @@ describe('JsonEditorPanel workspace hierarchy', () => {
         model={buildDocumentEditorModel({
           payload: {
             status: 'invalid',
+            reason: 'syntax',
             value: '{',
             message: 'Invalid JSON',
           },
@@ -107,5 +111,20 @@ describe('JsonEditorPanel workspace hierarchy', () => {
     )
 
     expect(screen.getByRole('button', { name: 'Format JSON' })).toBeDisabled()
+    expect(screen.queryByText('Waiting')).not.toBeInTheDocument()
+    expect(screen.queryByText('Invalid JSON')).not.toBeInTheDocument()
+  })
+
+  it('does not repeat valid JSON or unsaved state in the payload header', () => {
+    render(
+      <JsonEditorPanel
+        mode={{ type: 'saved', documentUrl: '/blob/one', apiUrl: '/api/blob' }}
+        model={buildDocumentEditorModel({ hasUnsavedChanges: true })}
+        commands={buildDocumentEditorCommands()}
+      />,
+    )
+
+    expect(screen.queryByText('Valid JSON')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Unsaved changes')).toHaveLength(1)
   })
 })

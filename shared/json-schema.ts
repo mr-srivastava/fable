@@ -12,14 +12,35 @@ import type {
 
 export const JSON_SCHEMA_DRAFT_7 = 'http://json-schema.org/draft-07/schema#'
 
-export type SchemaValidationDiagnostic = {
+type SchemaValidationDiagnosticBase = {
   exampleId: string
-  instancePath: string
+  instancePointer: string
   fieldPointer: string
-  schemaPath: string
-  keyword: string
+  rulePointer: string
   message: string
 }
+
+export type SchemaValidationDiagnostic =
+  | (SchemaValidationDiagnosticBase & {
+      code: 'typeMismatch'
+      expected: string
+    })
+  | (SchemaValidationDiagnosticBase & {
+      code: 'enumMismatch'
+      allowedValues: Array<unknown>
+    })
+  | (SchemaValidationDiagnosticBase & {
+      code: 'missingProperty'
+      missingProperty: string
+    })
+  | (SchemaValidationDiagnosticBase & {
+      code: 'unexpectedProperty'
+      unexpectedProperty: string
+    })
+  | (SchemaValidationDiagnosticBase & {
+      code: 'constraintViolation'
+      constraint: string
+    })
 
 type SchemaNode = JsonSchema & {
   $ref?: string
@@ -304,20 +325,73 @@ export function validateExamplesAgainstSchema(
   return examples.flatMap((example) => {
     const value = JSON.parse(example.data)
     if (validate(value)) return []
-    return (validate.errors ?? []).map((error: ErrorObject) => ({
-      exampleId: example.id,
-      instancePath: error.instancePath,
-      fieldPointer:
+    return (validate.errors ?? []).map((error: ErrorObject) => {
+      const missingProperty =
         error.keyword === 'required' && 'missingProperty' in error.params
-          ? `${error.instancePath}/${escapeJsonPointerSegment(String(error.params.missingProperty))}`
-          : error.instancePath
-              .split('/')
-              .map((segment) => (/^\d+$/.test(segment) ? '*' : segment))
-              .join('/'),
-      schemaPath: error.schemaPath,
-      keyword: error.keyword,
-      message: error.message ?? 'Schema validation failed',
-    }))
+          ? String(error.params.missingProperty)
+          : undefined
+      const unexpectedProperty =
+        error.keyword === 'additionalProperties' &&
+        'additionalProperty' in error.params
+          ? String(error.params.additionalProperty)
+          : undefined
+      const instancePointer = unexpectedProperty
+        ? `${error.instancePath}/${escapeJsonPointerSegment(unexpectedProperty)}`
+        : error.instancePath
+      const fieldPointer = missingProperty
+        ? `${error.instancePath}/${escapeJsonPointerSegment(missingProperty)}`
+        : error.instancePath
+            .split('/')
+            .map((segment) => (/^\d+$/.test(segment) ? '*' : segment))
+            .join('/')
+      const base: SchemaValidationDiagnosticBase = {
+        exampleId: example.id,
+        instancePointer,
+        fieldPointer,
+        rulePointer: error.schemaPath,
+        message: '',
+      }
+
+      if (error.keyword === 'type' && 'type' in error.params) {
+        const expected = String(error.params.type)
+        return {
+          ...base,
+          code: 'typeMismatch',
+          expected,
+          message: `Expected ${expected}.`,
+        }
+      }
+      if (error.keyword === 'enum' && 'allowedValues' in error.params) {
+        return {
+          ...base,
+          code: 'enumMismatch',
+          allowedValues: error.params.allowedValues as Array<unknown>,
+          message: 'Use one of the allowed values.',
+        }
+      }
+      if (missingProperty) {
+        return {
+          ...base,
+          code: 'missingProperty',
+          missingProperty,
+          message: `Missing required property ${JSON.stringify(missingProperty)}.`,
+        }
+      }
+      if (unexpectedProperty) {
+        return {
+          ...base,
+          code: 'unexpectedProperty',
+          unexpectedProperty,
+          message: `Property ${JSON.stringify(unexpectedProperty)} is not allowed.`,
+        }
+      }
+      return {
+        ...base,
+        code: 'constraintViolation',
+        constraint: error.keyword,
+        message: `Does not satisfy the ${error.keyword} constraint.`,
+      }
+    })
   })
 }
 

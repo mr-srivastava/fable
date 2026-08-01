@@ -51,7 +51,7 @@ describe('document editor view model', () => {
     )
     expect(createDocumentEditorViewModel(ready)).toMatchObject({
       payload: { status: 'valid', value: '{"id":1}', size: 8 },
-      contract: { status: { type: 'ready' } },
+      contract: { status: { type: 'ready' }, valueFreshness: 'current' },
       submission: { status: 'available' },
       exports: { status: 'available' },
     })
@@ -74,6 +74,7 @@ describe('document editor view model', () => {
     expect(model.payload.status).toBe('invalid')
     expect(model.contract.status).toEqual({ type: 'invalidJson' })
     expect(model.contract.value).toBeDefined()
+    expect(model.contract.valueFreshness).toBe('retained')
     expect(model.submission).toEqual({
       status: 'unavailable',
       reason: 'invalidJson',

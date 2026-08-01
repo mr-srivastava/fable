@@ -1,17 +1,15 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Braces, Check } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import type {
   JsonEditorGridProps,
   JsonEditorPanelHeaderProps,
   JsonEditorPanelProps,
 } from './JsonEditorPanel.types'
-import type { PayloadViewState } from '@/lib/document-editor-model'
 import { ContractPanel } from '@/components/contract/ContractPanel'
 import { ExamplesTabs } from '@/components/examples/ExamplesTabs'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
-import { JsonEditor } from '@/components/JsonEditor'
+import { JsonEditor } from '@/components/json-editor/JsonEditor'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
@@ -19,15 +17,7 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { formatJson } from '@/lib/json'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { cn } from '@/lib/utils'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
@@ -37,8 +27,6 @@ const CREATE_DEFAULTS = {
   description:
     'Paste JSON to infer field metadata, annotate the contract, and share the specimen.',
 } as const
-
-type PayloadStatus = PayloadViewState['status']
 
 function JsonEditorPanelHeader({
   mode,
@@ -74,56 +62,6 @@ function JsonEditorPanelHeader({
         <p className="text-sm text-muted-foreground">{description}</p>
       )}
     </header>
-  )
-}
-
-function getStatusBadge(status: PayloadStatus) {
-  if (status === 'valid') return 'Valid JSON'
-  if (status === 'invalid') return 'Invalid JSON'
-  return 'Waiting'
-}
-
-function PayloadStatusBadge({
-  status,
-  hasUnsavedChanges,
-}: {
-  status: PayloadStatus
-  hasUnsavedChanges?: boolean
-}) {
-  if (status === 'valid') {
-    return (
-      <Badge
-        variant="outline"
-        className={cn(
-          'gap-1.5 border-success/40 bg-success/10 text-success',
-          hasUnsavedChanges &&
-            'border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300',
-        )}
-      >
-        <span
-          className={cn(
-            'size-2 rounded-full bg-success',
-            hasUnsavedChanges &&
-              'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgb(251_191_36_/_0.18)]',
-          )}
-          aria-hidden="true"
-        />
-        {hasUnsavedChanges ? (
-          'Unsaved changes'
-        ) : (
-          <>
-            <Check className="size-3.5" />
-            Valid JSON
-          </>
-        )}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge variant={status === 'invalid' ? 'default' : 'secondary'}>
-      {getStatusBadge(status)}
-    </Badge>
   )
 }
 
@@ -200,128 +138,69 @@ function ContractDiagnosticsNotice({
 
 function SchemaStatusNotice({
   contract,
-  examples,
 }: {
   contract: JsonEditorPanelProps['model']['contract']
-  examples: JsonEditorPanelProps['model']['examples']
 }) {
   if (contract.status.type === 'inferring') {
     return (
-      <Alert>
-        <AlertTitle>Inferring contract</AlertTitle>
-        <AlertDescription>
-          Specimen is updating the JSON Schema from all valid examples.
-        </AlertDescription>
-      </Alert>
+      <p role="status" className="text-sm text-muted-foreground">
+        Updating contract…
+      </p>
     )
   }
-  if (contract.status.type === 'invalidJson') {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Invalid JSON</AlertTitle>
-        <AlertDescription>
-          Fix the malformed example before contract inference can continue.
-        </AlertDescription>
-      </Alert>
-    )
-  }
+  if (contract.status.type === 'invalidJson') return null
   if (contract.status.type === 'invalidContract') {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" role="alert">
         <AlertTitle>Invalid contract</AlertTitle>
         <AlertDescription>{contract.status.message}</AlertDescription>
       </Alert>
     )
   }
   if (contract.status.type !== 'violations') return null
-
-  const names = new Map(
-    examples.items.map((example) => [example.id, example.name]),
-  )
   return (
-    <Alert variant="destructive">
-      <AlertTitle>Examples violate the contract</AlertTitle>
-      <AlertDescription>
-        <ul className="list-disc space-y-1 pl-4">
-          {contract.schemaDiagnostics.slice(0, 5).map((diagnostic, index) => (
-            <li
-              key={`${diagnostic.exampleId}:${diagnostic.schemaPath}:${index}`}
-            >
-              {names.get(diagnostic.exampleId) ?? diagnostic.exampleId}:{' '}
-              <code>{diagnostic.instancePath || '/'}</code> {diagnostic.message}
-            </li>
-          ))}
-        </ul>
-      </AlertDescription>
-    </Alert>
+    <p role="status" className="text-sm text-destructive">
+      {contract.status.count} contract issue
+      {contract.status.count === 1 ? '' : 's'} across the examples. Review the
+      marked values and fields.
+    </p>
   )
 }
 
 function PayloadPanel({
   value,
   onChange,
-  error,
+  validation,
   size,
-  status,
+  assistance,
+  pathCoordination,
   examples,
   activeExampleId,
   onSelectExample,
   onRenameExample,
   onAddExample,
   onDeleteExample,
-  hasUnsavedChanges,
   validationCounts,
   canAddExample,
-  activePath,
-  contractPaths,
-  onActivePathChange,
-  onActivePathPresenceChange,
 }: JsonEditorGridProps & {
-  status: PayloadStatus
   examples: JsonEditorPanelProps['model']['examples']['items']
   activeExampleId: string
   onSelectExample: (id: string) => void
   onRenameExample: (id: string, name: string) => void
   onAddExample: () => void
   onDeleteExample: (id: string) => void
-  hasUnsavedChanges?: boolean
   validationCounts: Record<string, number>
   canAddExample: boolean
-  activePath?: string
-  contractPaths: ReadonlySet<string>
-  onActivePathChange: (path?: string) => void
-  onActivePathPresenceChange: (present: boolean) => void
 }) {
-  const canFormat = status === 'valid' && value.trim() !== ''
-  const handleFormat = () => {
-    if (!canFormat) return
-    const formattedValue = formatJson(value)
-    if (formattedValue && formattedValue !== value) onChange(formattedValue)
-  }
-
   return (
-    <div
-      className="flex flex-col gap-2"
-      onKeyDown={(event) => {
-        if (event.altKey && event.shiftKey && event.key.toLowerCase() === 'f') {
-          event.preventDefault()
-          handleFormat()
-        }
-      }}
-    >
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Payload
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Source JSON for this specimen.
-          </p>
-        </div>
-        <PayloadStatusBadge
-          status={status}
-          hasUnsavedChanges={hasUnsavedChanges}
-        />
+    <div className="flex flex-col gap-2">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          Payload
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Source JSON for this specimen.
+        </p>
       </div>
       <ExamplesTabs
         examples={examples}
@@ -334,39 +213,13 @@ function PayloadPanel({
         canAdd={canAddExample}
       >
         <div className="space-y-3">
-          <div className="flex justify-end">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      onClick={handleFormat}
-                      disabled={!canFormat}
-                      aria-label="Format JSON"
-                      aria-keyshortcuts="Alt+Shift+F"
-                    />
-                  }
-                >
-                  <Braces />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Format JSON <span className="ml-1 opacity-70">⇧⌥F</span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
           <JsonEditor
             value={value}
             onChange={onChange}
-            error={error}
+            validation={validation}
             size={size}
-            activePath={activePath}
-            contractPaths={contractPaths}
-            onActivePathChange={onActivePathChange}
-            onActivePathPresenceChange={onActivePathPresenceChange}
+            assistance={assistance}
+            pathCoordination={pathCoordination}
           />
         </div>
       </ExamplesTabs>
@@ -377,13 +230,41 @@ function PayloadPanel({
 export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const { model, commands, description: descriptionProp, title, mode } = props
   const { contract, examples, payload } = model
-  const [activePath, setActivePath] = useState<string>()
-  const [activePathPresent, setActivePathPresent] = useState(true)
+  const [activePointer, setActivePointer] = useState<string>()
+  const [activePointerPresent, setActivePointerPresent] = useState(true)
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const contractPaths = useMemo(
-    () => new Set(contract.value?.fields.map((field) => field.path) ?? []),
-    [contract.value?.fields],
+  const assistance = useMemo<JsonEditorGridProps['assistance']>(() => {
+    if (!contract.value) return { status: 'unavailable' }
+    const current = contract.valueFreshness === 'current'
+    return current
+      ? {
+          status: 'available',
+          freshness: 'current',
+          fields: contract.value.fields,
+          diagnostics: contract.schemaDiagnostics.filter(
+            (diagnostic) => diagnostic.exampleId === examples.activeId,
+          ),
+        }
+      : {
+          status: 'available',
+          freshness: 'retained',
+          fields: contract.value.fields,
+        }
+  }, [contract, examples.activeId])
+  const pathCoordination = useMemo<JsonEditorGridProps['pathCoordination']>(
+    () => ({
+      activePointer,
+      onActivePointerChange: setActivePointer,
+      onActivePointerPresenceChange: setActivePointerPresent,
+    }),
+    [activePointer],
   )
+  const validation: JsonEditorGridProps['validation'] =
+    payload.status !== 'invalid'
+      ? { status: 'valid' }
+      : payload.reason === 'syntax'
+        ? { status: 'syntaxError' }
+        : { status: 'externalError', message: payload.message }
 
   const isCreate = mode.type === 'create'
   const description =
@@ -393,22 +274,18 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     <PayloadPanel
       value={payload.value}
       onChange={(json) => commands.updateExample(examples.activeId, json)}
-      error={payload.status === 'invalid' ? payload.message : undefined}
+      validation={validation}
       size={payload.size}
-      status={payload.status}
+      assistance={assistance}
+      pathCoordination={pathCoordination}
       examples={examples.items}
       activeExampleId={examples.activeId}
       onSelectExample={commands.selectExample}
       onRenameExample={commands.renameExample}
       onAddExample={commands.addExample}
       onDeleteExample={commands.removeExample}
-      hasUnsavedChanges={model.hasUnsavedChanges}
       validationCounts={examples.validationCounts}
       canAddExample={examples.canAdd}
-      activePath={activePath}
-      contractPaths={contractPaths}
-      onActivePathChange={setActivePath}
-      onActivePathPresenceChange={setActivePathPresent}
     />
   )
 
@@ -423,9 +300,9 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         disabled={contract.status.type === 'invalidJson'}
         onOverrideChange={commands.changeContractOverride}
         schemaDiagnostics={contract.schemaDiagnostics}
-        activePath={activePath}
-        activePathPresent={activePathPresent}
-        onSelectPath={setActivePath}
+        activePointer={activePointer}
+        activePointerPresent={activePointerPresent}
+        onSelectPointer={setActivePointer}
       />
     </div>
   )
@@ -438,7 +315,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           title={title}
           description={description}
         />
-        <SchemaStatusNotice contract={contract} examples={examples} />
+        <SchemaStatusNotice contract={contract} />
 
         {isDesktop ? (
           <ResizablePanelGroup
