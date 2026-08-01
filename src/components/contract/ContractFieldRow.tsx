@@ -1,4 +1,5 @@
 import { EnumValuesInput } from './EnumValuesInput'
+import type { Ref } from 'react'
 import type { JsonContractField } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
 import type { ContractOverrideChange } from '@/lib/document-draft'
@@ -28,6 +29,9 @@ type ContractFieldRowProps = {
   childCount?: number
   onOverrideChange: (change: ContractOverrideChange) => void
   schemaDiagnostics?: Array<SchemaValidationDiagnostic>
+  selected?: boolean
+  onSelect?: () => void
+  rowRef?: Ref<HTMLDivElement>
 }
 
 export function ContractFieldReferenceItem({
@@ -38,19 +42,28 @@ export function ContractFieldReferenceItem({
   childCount = 0,
   onOverrideChange,
   schemaDiagnostics = [],
+  selected = false,
+  onSelect,
+  rowRef,
 }: ContractFieldRowProps) {
   const isEditable = !isContainer
   const pointer = field.schemaPointer
 
   return (
     <AccordionItem
+      ref={rowRef}
       value={field.path}
       className={cn(
         'border-b px-3 last:border-b-0',
         isContainer && 'bg-muted/20',
+        selected && 'bg-primary/10 ring-1 ring-inset ring-primary/40',
       )}
     >
-      <AccordionTrigger className="py-3 hover:no-underline">
+      <AccordionTrigger
+        className="py-3 hover:no-underline"
+        aria-label={`${selected ? 'Selected field: ' : ''}${field.path}`}
+        onClick={onSelect}
+      >
         <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-left">
           <div
             className="flex min-w-0 items-center gap-2"

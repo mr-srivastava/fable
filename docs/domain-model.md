@@ -83,5 +83,8 @@ Records created by older versions may contain a flattened `contract` or only
 `data`, `size`, and metadata. The frontend normalizes data-only records into a
 single default example and infers missing JSON Schema in the browser. Matching
 legacy descriptions and enumerated values become overrides. The next successful
-save writes metadata version 2, `jsonSchema`, `contractOverrides`, and the
-flattened compatibility contract. No background migration is required.
+save writes metadata version 3, `jsonSchemaJson`, `contractOverrides`, and the
+flattened compatibility contract. JSON Schema is stored as serialized JSON
+because Convex reserves object keys beginning with `$`. Reads continue to
+accept the legacy object-form `jsonSchema` field. No background migration is
+required.

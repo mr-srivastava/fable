@@ -5,6 +5,8 @@ import {
   documentExampleSchema,
   jsonContractSchema,
   parseDocumentId,
+  parseSerializedJsonSchema,
+  serializeJsonSchema,
 } from '@shared/document'
 
 const validExample = {
@@ -77,5 +79,26 @@ describe('parseDocumentId', () => {
     expect(parseDocumentId('short')).toBeNull()
     expect(parseDocumentId('a'.repeat(65))).toBeNull()
     expect(parseDocumentId('abc-123456')).toBeNull()
+  })
+})
+
+describe('serialized JSON Schema persistence', () => {
+  it('preserves reserved JSON Schema keywords inside a string', () => {
+    const jsonSchema = {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      $ref: '#/definitions/Specimen',
+      definitions: { Specimen: { type: 'object' } },
+    }
+
+    const serialized = serializeJsonSchema(jsonSchema)
+
+    expect(serialized).toBeTypeOf('string')
+    expect(parseSerializedJsonSchema(serialized!)).toEqual(jsonSchema)
+  })
+
+  it('rejects serialized values that are not schema objects', () => {
+    expect(() => parseSerializedJsonSchema('[]')).toThrow(
+      'Stored JSON Schema must be an object',
+    )
   })
 })

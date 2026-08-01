@@ -35,7 +35,7 @@ http.route({
 
     try {
       const now = Date.now()
-      const blobId = await ctx.runMutation(api.documents.create, {
+      const blobId = await ctx.runAction(api.documentWrites.create, {
         examples: [
           {
             id: 'default',

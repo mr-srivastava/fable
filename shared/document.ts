@@ -111,3 +111,17 @@ export function parseJsonContract(contract: unknown): JsonContract {
 export function parseContractOverrides(overrides: unknown): ContractOverrides {
   return schema.parse(contractOverridesSchema, overrides)
 }
+
+export function serializeJsonSchema(
+  jsonSchema: JsonSchema | undefined,
+): string | undefined {
+  return jsonSchema ? JSON.stringify(jsonSchema) : undefined
+}
+
+export function parseSerializedJsonSchema(value: string): JsonSchema {
+  const parsed: unknown = JSON.parse(value)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Stored JSON Schema must be an object')
+  }
+  return parsed as JsonSchema
+}

@@ -119,13 +119,22 @@ normalizes the effective schema, and derives these stored projections:
 - `size` contains the first example's UTF-8 byte size.
 - `totalSize` contains the serialized document payload size.
 - `metadata.version` identifies the stored representation.
+- `jsonSchemaJson` contains the canonical schema serialized as JSON so standard
+  `$schema` and `$ref` keywords never cross the Convex value boundary.
 
 The persistence module rejects override pointers that don't resolve against
 the schema. Derived projections are implementation details; callers don't
 synchronize them independently.
 
-Version 2 records store JSON Schema as the canonical contract. The flattened
-contract remains an additive compatibility projection during migration.
+Ajv validation and persistence preparation run in a Convex Node action because
+Ajv compiles dynamic schemas at runtime. The action passes only validated,
+Convex-safe prepared values to a private mutation that performs the database
+write.
+
+Version 3 records store serialized JSON Schema as the canonical contract.
+Reads accept the legacy version 2 object field and normalize it to the string
+representation. The flattened contract remains an additive compatibility
+projection during migration.
 
 ## Configuration seam
 

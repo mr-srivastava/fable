@@ -39,7 +39,17 @@ export const contractFieldOverrideValidator = v.object({
   description: v.optional(v.string()),
 })
 
-export const documentValidator = v.object({
+export const preparedDocumentValidator = v.object({
+  data: v.string(),
+  examples: v.array(documentExampleValidator),
+  size: v.number(),
+  totalSize: v.number(),
+  contract: v.optional(documentContractValidator),
+  jsonSchemaJson: v.optional(v.string()),
+  contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
+})
+
+export const documentReadValidator = v.object({
   _id: v.id('documents'),
   _creationTime: v.number(),
   data: v.string(),
@@ -53,6 +63,6 @@ export const documentValidator = v.object({
     }),
   ),
   contract: v.optional(documentContractValidator),
-  jsonSchema: v.optional(v.any()),
+  jsonSchemaJson: v.optional(v.string()),
   contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
 })

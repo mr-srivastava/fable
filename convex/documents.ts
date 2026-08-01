@@ -1,38 +1,25 @@
 import { v } from 'convex/values'
-import { prepareDocumentRecord } from '../shared/document-write'
-import { mutation, query } from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
 import {
-  contractFieldOverrideValidator,
-  documentContractValidator,
-  documentExampleValidator,
-  documentValidator,
+  documentReadValidator,
+  preparedDocumentValidator,
 } from './documentModel'
 
-export const create = mutation({
-  args: {
-    examples: v.array(documentExampleValidator),
-    contract: v.optional(documentContractValidator),
-    jsonSchema: v.optional(v.any()),
-    contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
-  },
+export const createPrepared = internalMutation({
+  args: { prepared: preparedDocumentValidator },
   returns: v.id('documents'),
   handler: async (ctx, args) => {
-    const prepared = prepareDocumentRecord(
-      args.examples,
-      args.contract,
-      args.jsonSchema,
-      args.contractOverrides,
-    )
+    const { prepared } = args
 
     return ctx.db.insert('documents', {
       data: prepared.data,
-      examples: args.examples,
+      examples: prepared.examples,
       size: prepared.size,
       totalSize: prepared.totalSize,
       updatedAt: Date.now(),
-      metadata: { version: prepared.jsonSchema ? 2 : 1 },
+      metadata: { version: prepared.jsonSchemaJson ? 3 : 1 },
       contract: prepared.contract,
-      jsonSchema: prepared.jsonSchema,
+      jsonSchemaJson: prepared.jsonSchemaJson,
       contractOverrides: prepared.contractOverrides,
     })
   },
@@ -40,38 +27,39 @@ export const create = mutation({
 
 export const get = query({
   args: { id: v.id('documents') },
-  returns: v.union(documentValidator, v.null()),
+  returns: v.union(documentReadValidator, v.null()),
   handler: async (ctx, args) => {
-    return ctx.db.get(args.id)
+    const document = await ctx.db.get(args.id)
+    if (!document) return null
+
+    const { jsonSchema, jsonSchemaJson, ...rest } = document
+    return {
+      ...rest,
+      jsonSchemaJson:
+        jsonSchemaJson ?? (jsonSchema ? JSON.stringify(jsonSchema) : undefined),
+    }
   },
 })
 
-export const update = mutation({
+export const updatePrepared = internalMutation({
   args: {
     id: v.id('documents'),
-    examples: v.array(documentExampleValidator),
-    contract: v.optional(documentContractValidator),
-    jsonSchema: v.optional(v.any()),
-    contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
+    prepared: preparedDocumentValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const prepared = prepareDocumentRecord(
-      args.examples,
-      args.contract,
-      args.jsonSchema,
-      args.contractOverrides,
-    )
+    const { prepared } = args
 
     await ctx.db.patch(args.id, {
       data: prepared.data,
-      examples: args.examples,
+      examples: prepared.examples,
       size: prepared.size,
       totalSize: prepared.totalSize,
       updatedAt: Date.now(),
-      metadata: { version: prepared.jsonSchema ? 2 : 1 },
+      metadata: { version: prepared.jsonSchemaJson ? 3 : 1 },
       contract: prepared.contract,
-      jsonSchema: prepared.jsonSchema,
+      jsonSchema: undefined,
+      jsonSchemaJson: prepared.jsonSchemaJson,
       contractOverrides: prepared.contractOverrides,
     })
     return null

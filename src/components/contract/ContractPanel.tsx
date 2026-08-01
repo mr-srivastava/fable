@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { ContractFieldReferenceItem } from './ContractFieldRow'
 import type { JsonContract, JsonContractField } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
@@ -17,6 +18,9 @@ type ContractPanelProps = {
   disabled?: boolean
   onOverrideChange: (change: ContractOverrideChange) => void
   schemaDiagnostics?: Array<SchemaValidationDiagnostic>
+  activePath?: string
+  activePathPresent?: boolean
+  onSelectPath?: (path: string) => void
 }
 
 function getImmediateChildCount(
@@ -37,9 +41,23 @@ export function ContractPanel({
   disabled = false,
   onOverrideChange,
   schemaDiagnostics = [],
+  activePath,
+  activePathPresent = true,
+  onSelectPath,
 }: ContractPanelProps) {
+  const rowRefs = useRef(new Map<string, HTMLDivElement>())
   const fields = contract?.fields ?? []
   const rows = buildContractDisplayRows(fields)
+
+  useEffect(() => {
+    if (!activePath) return
+    rowRefs.current.get(activePath)?.scrollIntoView({
+      block: 'nearest',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    })
+  }, [activePath])
 
   return (
     <section className="animate-fade-in-up-delay-2 flex min-h-0 flex-col gap-3">
@@ -62,6 +80,12 @@ export function ContractPanel({
         </p>
       )}
 
+      {activePath && !activePathPresent && (
+        <p role="status" className="text-xs text-muted-foreground">
+          <code>{activePath}</code> is not present in this example.
+        </p>
+      )}
+
       <div className="min-h-0 overflow-hidden rounded-md border bg-card">
         {disabled || fields.length === 0 ? (
           <Empty className="min-h-32 border-0 py-8">
@@ -79,10 +103,16 @@ export function ContractPanel({
               {rows.map(({ field, depth, label, isContainer }) => (
                 <ContractFieldReferenceItem
                   key={field.path}
+                  rowRef={(node) => {
+                    if (node) rowRefs.current.set(field.path, node)
+                    else rowRefs.current.delete(field.path)
+                  }}
                   field={field}
                   depth={depth}
                   label={label}
                   isContainer={isContainer}
+                  selected={field.path === activePath}
+                  onSelect={() => onSelectPath?.(field.path)}
                   childCount={
                     isContainer ? getImmediateChildCount(field, fields) : 0
                   }

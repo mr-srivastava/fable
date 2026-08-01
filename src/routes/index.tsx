@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import { useMutation } from 'convex/react'
+import { useAction } from 'convex/react'
+import { serializeJsonSchema } from '@shared/document'
 import { api } from '../../convex/_generated/api'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
@@ -17,11 +18,15 @@ function CreateDocument() {
     [],
   )
   const navigate = useNavigate()
-  const createDocument = useMutation(api.documents.create)
+  const createDocument = useAction(api.documentWrites.create)
   const editor = useDocumentEditor({
     initialDraft,
     persistDocument: async (input) => {
-      const id = await createDocument(input)
+      const { jsonSchema, ...documentInput } = input
+      const id = await createDocument({
+        ...documentInput,
+        jsonSchemaJson: serializeJsonSchema(jsonSchema),
+      })
       navigate({ to: '/blob/$id', params: { id } })
       return { type: 'created', documentId: id }
     },

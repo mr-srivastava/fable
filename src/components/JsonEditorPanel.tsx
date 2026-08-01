@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { AlertTriangle, Check } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { AlertTriangle, Braces, Check } from 'lucide-react'
 import type {
   JsonEditorGridProps,
   JsonEditorPanelHeaderProps,
@@ -19,6 +19,13 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { formatJson } from '@/lib/json'
 import { cn } from '@/lib/utils'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
@@ -263,6 +270,10 @@ function PayloadPanel({
   hasUnsavedChanges,
   validationCounts,
   canAddExample,
+  activePath,
+  contractPaths,
+  onActivePathChange,
+  onActivePathPresenceChange,
 }: JsonEditorGridProps & {
   status: PayloadStatus
   examples: JsonEditorPanelProps['model']['examples']['items']
@@ -274,9 +285,27 @@ function PayloadPanel({
   hasUnsavedChanges?: boolean
   validationCounts: Record<string, number>
   canAddExample: boolean
+  activePath?: string
+  contractPaths: ReadonlySet<string>
+  onActivePathChange: (path?: string) => void
+  onActivePathPresenceChange: (present: boolean) => void
 }) {
+  const formattedValue = status === 'valid' ? formatJson(value) : ''
+  const canFormat = formattedValue !== '' && formattedValue !== value
+  const handleFormat = () => {
+    if (canFormat) onChange(formattedValue)
+  }
+
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className="flex flex-col gap-2"
+      onKeyDown={(event) => {
+        if (event.altKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+          event.preventDefault()
+          handleFormat()
+        }
+      }}
+    >
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
@@ -300,48 +329,41 @@ function PayloadPanel({
         onDelete={onDeleteExample}
         validationCounts={validationCounts}
         canAdd={canAddExample}
-      />
-      <Tabs defaultValue="editor" className="gap-3">
-        <TabsList>
-          <TabsTrigger value="editor">Editor</TabsTrigger>
-          <TabsTrigger value="formatted">Formatted</TabsTrigger>
-        </TabsList>
-        <TabsContent value="editor">
+      >
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleFormat}
+                    disabled={!canFormat}
+                    aria-label="Format JSON"
+                    aria-keyshortcuts="Alt+Shift+F"
+                  >
+                    <Braces />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Format JSON <span className="ml-1 opacity-70">⇧⌥F</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <JsonEditor
-            mode="edit"
             value={value}
             onChange={onChange}
             error={error}
+            activePath={activePath}
+            contractPaths={contractPaths}
+            onActivePathChange={onActivePathChange}
+            onActivePathPresenceChange={onActivePathPresenceChange}
           />
-        </TabsContent>
-        <TabsContent value="formatted">
-          <JsonEditor
-            mode="view"
-            value={value}
-            height="clamp(20rem, 48vh, 30rem)"
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-function FormattedPanel({ value }: Pick<JsonEditorGridProps, 'value'>) {
-  return (
-    <div className="animate-fade-in-up-delay-2 space-y-2">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          Formatted
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Read-only normalized view of the payload.
-        </p>
-      </div>
-      <JsonEditor
-        mode="view"
-        value={value}
-        height="clamp(20rem, 48vh, 30rem)"
-      />
+        </div>
+      </ExamplesTabs>
     </div>
   )
 }
@@ -349,6 +371,12 @@ function FormattedPanel({ value }: Pick<JsonEditorGridProps, 'value'>) {
 export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const { model, commands, description: descriptionProp, title, mode } = props
   const { contract, examples, payload } = model
+  const [activePath, setActivePath] = useState<string>()
+  const [activePathPresent, setActivePathPresent] = useState(true)
+  const contractPaths = useMemo(
+    () => new Set(contract.value?.fields.map((field) => field.path) ?? []),
+    [contract.value?.fields],
+  )
 
   const isCreate = mode.type === 'create'
   const description =
@@ -356,7 +384,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
 
   return (
     <>
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 md:pb-24">
+      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 pb-32 sm:px-6">
         <JsonEditorPanelHeader
           mode={mode.type}
           title={title}
@@ -369,9 +397,8 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
           className="gap-4 md:hidden"
           aria-label="Workspace panels"
         >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="payload">Payload</TabsTrigger>
-            <TabsTrigger value="formatted">Formatted</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="payload">Examples</TabsTrigger>
             <TabsTrigger value="contract">Contract</TabsTrigger>
           </TabsList>
           <TabsContent value="payload">
@@ -391,10 +418,11 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               hasUnsavedChanges={model.hasUnsavedChanges}
               validationCounts={examples.validationCounts}
               canAddExample={examples.canAdd}
+              activePath={activePath}
+              contractPaths={contractPaths}
+              onActivePathChange={setActivePath}
+              onActivePathPresenceChange={setActivePathPresent}
             />
-          </TabsContent>
-          <TabsContent value="formatted">
-            <FormattedPanel value={payload.value} />
           </TabsContent>
           <TabsContent value="contract">
             <ContractDiagnosticsNotice
@@ -406,6 +434,9 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               disabled={contract.status.type === 'invalidJson'}
               onOverrideChange={commands.changeContractOverride}
               schemaDiagnostics={contract.schemaDiagnostics}
+              activePath={activePath}
+              activePathPresent={activePathPresent}
+              onSelectPath={setActivePath}
             />
           </TabsContent>
         </Tabs>
@@ -431,6 +462,10 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               hasUnsavedChanges={model.hasUnsavedChanges}
               validationCounts={examples.validationCounts}
               canAddExample={examples.canAdd}
+              activePath={activePath}
+              contractPaths={contractPaths}
+              onActivePathChange={setActivePath}
+              onActivePathPresenceChange={setActivePathPresent}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -445,6 +480,9 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
                 disabled={contract.status.type === 'invalidJson'}
                 onOverrideChange={commands.changeContractOverride}
                 schemaDiagnostics={contract.schemaDiagnostics}
+                activePath={activePath}
+                activePathPresent={activePathPresent}
+                onSelectPath={setActivePath}
               />
             </div>
           </ResizablePanel>

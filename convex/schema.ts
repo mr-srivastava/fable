@@ -15,7 +15,10 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
     metadata: v.optional(v.object({ version: v.number() })),
     contract: v.optional(documentContractValidator),
+    // Legacy object-form field. New writes use jsonSchemaJson because Convex
+    // reserves JSON Schema keywords beginning with `$`.
     jsonSchema: v.optional(v.any()),
+    jsonSchemaJson: v.optional(v.string()),
     contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
   }),
 })
