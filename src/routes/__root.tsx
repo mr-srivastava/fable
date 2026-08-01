@@ -1,7 +1,7 @@
 import {
   HeadContent,
   Scripts,
-  createRootRouteWithContext,
+  createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -11,18 +11,11 @@ import { ThemeProvider } from '../components/ThemeProvider'
 
 import ConvexProvider from '../integrations/convex/provider'
 
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-
 import appCss from '../styles.css?url'
 import { getThemeInitScript } from '../hooks/use-theme'
-import type { QueryClient } from '@tanstack/react-query'
 import { publicConfig } from '@/config/runtime'
 
-interface MyRouterContext {
-  queryClient: QueryClient
-}
-
-export const Route = createRootRouteWithContext<MyRouterContext>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       {
@@ -82,7 +75,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                     name: 'Tanstack Router',
                     render: <TanStackRouterDevtoolsPanel />,
                   },
-                  TanStackQueryDevtools,
                 ]}
               />
             )}

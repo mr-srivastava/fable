@@ -1,8 +1,7 @@
-import { ConvexProvider } from 'convex/react'
-import { ConvexQueryClient } from '@convex-dev/react-query'
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { publicConfig } from '@/config/runtime'
 
-const convexQueryClient = new ConvexQueryClient(publicConfig.convexUrl)
+const convexClient = new ConvexReactClient(publicConfig.convexUrl)
 
 export default function AppConvexProvider({
   children,
@@ -10,8 +9,6 @@ export default function AppConvexProvider({
   children: React.ReactNode
 }) {
   return (
-    <ConvexProvider client={convexQueryClient.convexClient}>
-      {children}
-    </ConvexProvider>
+    <ConvexProvider client={convexClient}>{children}</ConvexProvider>
   )
 }
