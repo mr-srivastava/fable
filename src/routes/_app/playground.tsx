@@ -29,10 +29,12 @@ function PlaygroundPage() {
   })
 
   return (
-    <JsonEditorPanel
-      mode={{ type: 'create' }}
-      model={editor.model}
-      commands={editor.commands}
-    />
+    <div className="min-h-[calc(100dvh-3.5rem)]">
+      <JsonEditorPanel
+        mode={{ type: 'create' }}
+        model={editor.model}
+        commands={editor.commands}
+      />
+    </div>
   )
 }

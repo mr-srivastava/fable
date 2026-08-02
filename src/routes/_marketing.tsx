@@ -11,7 +11,7 @@ function MarketingLayout() {
   return (
     <MarketingGridBackground className="flex min-h-screen flex-col text-foreground">
       <MarketingHeader />
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-clip">
         <Outlet />
       </main>
       <MarketingFooter />

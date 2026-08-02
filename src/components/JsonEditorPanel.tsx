@@ -1,4 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
+import type { ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import type {
   JsonEditorGridProps,
@@ -46,35 +47,40 @@ function JsonEditorPanelHeader({
   title,
   description,
 }: JsonEditorPanelHeaderProps) {
-  if (mode === 'create') {
-    return (
-      <header className="animate-fade-in-up space-y-2">
-        <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-primary">
-          Specimen workbench
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          {CREATE_HERO_TITLE}
-        </h1>
-        {description && (
-          <p className="max-w-xl text-sm text-muted-foreground">
-            {description}
-          </p>
-        )}
-      </header>
-    )
-  }
+  const pageTitle = mode === 'create' ? CREATE_HERO_TITLE : title
 
   return (
-    <header className="animate-fade-in-up space-y-1">
-      {title && (
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          {title}
+    <header className="animate-fade-in-up space-y-2">
+      <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-primary">
+        Specimen workbench
+      </p>
+      {pageTitle && (
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {pageTitle}
         </h1>
       )}
       {description && (
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       )}
     </header>
+  )
+}
+
+function WorkbenchShell({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn('workbench-elevated overflow-hidden rounded-2xl bg-card', className)}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -220,18 +226,13 @@ function PayloadPanel({
     <div
       className={
         fillHeight
-          ? 'flex h-full min-h-0 flex-col gap-2'
-          : 'flex flex-col gap-2'
+          ? 'flex h-full min-h-0 flex-col gap-4'
+          : 'flex flex-col gap-4'
       }
     >
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          Payload
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Source JSON for this specimen.
-        </p>
-      </div>
+      <h2 className="text-base font-semibold tracking-tight text-foreground">
+        Payload
+      </h2>
       <ExamplesTabs
         examples={examples}
         activeExampleId={activeExampleId}
@@ -338,31 +339,36 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         {!hydrated ? (
           <div className={WORKSPACE_HEIGHT_CLASS} aria-hidden="true" />
         ) : isDesktop ? (
-          <ResizablePanelGroup
-            orientation="horizontal"
-            className={`${WORKSPACE_HEIGHT_CLASS} gap-4`}
-          >
-            <ResizablePanel defaultSize={56} minSize={42}>
-              {payloadPanel}
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={44} minSize={32}>
-              {contractPanel}
-            </ResizablePanel>
-          </ResizablePanelGroup>
+          <WorkbenchShell className={WORKSPACE_HEIGHT_CLASS}>
+            <ResizablePanelGroup orientation="horizontal" className="h-full">
+              <ResizablePanel defaultSize={56} minSize={42}>
+                <div className="flex h-full min-h-0 flex-col p-5 sm:p-6">
+                  {payloadPanel}
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={44} minSize={32}>
+                <div className="flex h-full min-h-0 flex-col bg-muted/15 p-5 sm:p-6">
+                  {contractPanel}
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </WorkbenchShell>
         ) : (
-          <Tabs
-            defaultValue="payload"
-            className="gap-4"
-            aria-label="Workspace panels"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="payload">Examples</TabsTrigger>
-              <TabsTrigger value="contract">Contract</TabsTrigger>
-            </TabsList>
-            <TabsContent value="payload">{payloadPanel}</TabsContent>
-            <TabsContent value="contract">{contractPanel}</TabsContent>
-          </Tabs>
+          <WorkbenchShell className="p-5 sm:p-6">
+            <Tabs
+              defaultValue="payload"
+              className="gap-4"
+              aria-label="Workspace panels"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="payload">Examples</TabsTrigger>
+                <TabsTrigger value="contract">Contract</TabsTrigger>
+              </TabsList>
+              <TabsContent value="payload">{payloadPanel}</TabsContent>
+              <TabsContent value="contract">{contractPanel}</TabsContent>
+            </Tabs>
+          </WorkbenchShell>
         )}
       </section>
       <DocumentEditorActions mode={mode} model={model} commands={commands} />

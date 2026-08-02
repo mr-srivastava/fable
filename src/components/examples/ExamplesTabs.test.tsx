@@ -89,10 +89,8 @@ describe('ExamplesTabs', () => {
     const user = userEvent.setup()
     const props = renderTabs()
 
-    expect(
-      screen.getByRole('heading', { name: 'Examples' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('2 payloads')).toBeInTheDocument()
+    expect(screen.getByText(/Examples/)).toBeInTheDocument()
+    expect(screen.getByText(/2 payloads/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Add example' }))
 
     expect(props.onAdd).toHaveBeenCalledOnce()

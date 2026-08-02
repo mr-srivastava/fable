@@ -7,7 +7,7 @@ const CONTRACT_FIELDS = [
 
 function JsonPreview() {
   return (
-    <pre className="overflow-x-auto rounded-md border bg-background p-3 font-mono text-[11px] leading-relaxed text-foreground sm:text-xs">
+    <pre className="overflow-x-auto rounded-md border bg-background p-3 font-mono text-[11px] leading-relaxed text-foreground shadow-xs sm:text-xs">
       <code>
         <span className="text-muted-foreground">{'{'}</span>
         {'\n'}
@@ -42,15 +42,12 @@ export function MarketingWorkbenchPreview() {
     <div
       role="img"
       aria-label="Preview of the Specimen workbench with Payload and Contract Inspector panels"
-      className="marketing-elevated overflow-hidden rounded-2xl bg-card"
+      className="workbench-elevated overflow-hidden rounded-2xl bg-card"
     >
       <div className="grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:divide-x">
         <div className="space-y-4 p-5 sm:p-6">
           <div className="space-y-1">
             <h2 className="text-base font-semibold tracking-tight">Payload</h2>
-            <p className="text-sm text-muted-foreground">
-              Source JSON for this specimen.
-            </p>
           </div>
 
           <div className="flex items-center gap-2 border-b pb-2">
@@ -67,12 +64,9 @@ export function MarketingWorkbenchPreview() {
             <h2 className="text-base font-semibold tracking-tight">
               Contract Inspector
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Inspect and annotate fields inferred from the current examples.
-            </p>
           </div>
 
-          <div className="overflow-hidden rounded-md border bg-background">
+          <div className="overflow-hidden rounded-md border bg-background shadow-xs">
             {CONTRACT_FIELDS.map((field) => (
               <div
                 key={field.path}

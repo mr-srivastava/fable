@@ -187,7 +187,7 @@ export function JsonEditor({
       </div>
       <div
         className={cn(
-          'min-h-0 overflow-hidden rounded-md border border-border bg-card transition-colors',
+          'min-h-0 overflow-hidden rounded-md border border-border bg-card shadow-xs transition-colors',
           height === '100%' && 'flex-1',
           'ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
           validation.status !== 'valid' &&

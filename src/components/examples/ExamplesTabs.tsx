@@ -73,12 +73,13 @@ export function ExamplesTabs({
       className={fillHeight ? 'flex min-h-0 flex-1 flex-col gap-3' : 'gap-3'}
     >
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-medium text-foreground">Examples</h3>
-          <p className="text-xs text-muted-foreground">
-            {examples.length} {examples.length === 1 ? 'payload' : 'payloads'}
-          </p>
-        </div>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Examples
+          <span className="ml-2 font-normal normal-case tracking-normal">
+            · {examples.length}{' '}
+            {examples.length === 1 ? 'payload' : 'payloads'}
+          </span>
+        </p>
         <Button
           type="button"
           variant="outline"

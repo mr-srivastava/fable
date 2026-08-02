@@ -26,7 +26,7 @@ code {
   --secondary: oklch(0.925 0.01 90);
   --secondary-foreground: oklch(0.32 0.022 78);
   --muted: oklch(0.938 0.008 92);
-  --muted-foreground: oklch(0.465 0.022 85);
+  --muted-foreground: oklch(0.42 0.024 85);
   --accent: oklch(0.915 0.028 190);
   --accent-foreground: oklch(0.255 0.045 198);
   --destructive: oklch(0.54 0.19 27);
@@ -261,7 +261,8 @@ code {
     opacity: 0.9;
   }
 
-  .marketing-elevated {
+  .marketing-elevated,
+  .workbench-elevated {
     border: 1px solid oklch(0.88 0.01 92);
     box-shadow:
       0 1px 2px oklch(0.3 0.02 80 / 0.04),

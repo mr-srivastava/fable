@@ -90,12 +90,9 @@ export function ContractPanel({
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">
             Contract Inspector
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Inspect and annotate fields inferred from the current examples.
-          </p>
         </div>
       </div>
 
@@ -112,7 +109,7 @@ export function ContractPanel({
       )}
 
       <div
-        className={`min-h-0 overflow-hidden rounded-md border bg-card ${fillHeight ? 'flex-1' : ''}`}
+        className={`min-h-0 overflow-hidden rounded-md border bg-background shadow-xs ${fillHeight ? 'flex-1' : ''}`}
       >
         {disabled || fields.length === 0 ? (
           <Empty className="min-h-32 border-0 py-8">
