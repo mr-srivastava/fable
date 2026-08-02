@@ -6,7 +6,7 @@ import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
 import { createConvexPersistAdapter } from '@/lib/convex-persist-adapter'
 import { createDocumentDraft } from '@/lib/document-draft'
-import { createDefaultDocumentExamples } from '@/lib/document-examples'
+import { createDefaultDocumentVariants } from '@/lib/document-variants'
 
 export const Route = createFileRoute('/_app/playground')({
   component: PlaygroundPage,
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_app/playground')({
 
 function PlaygroundPage() {
   const initialDraft = useMemo(
-    () => createDocumentDraft(createDefaultDocumentExamples()),
+    () => createDocumentDraft(createDefaultDocumentVariants()),
     [],
   )
   const navigate = useNavigate()

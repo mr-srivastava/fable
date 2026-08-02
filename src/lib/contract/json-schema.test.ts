@@ -4,9 +4,9 @@ import {
   escapeJsonPointerSegment,
   normalizeJsonSchema,
   projectJsonSchemaToContract,
-  validateExamplesAgainstSchema,
+  validateVariantsAgainstSchema,
 } from '@shared/json-schema'
-import type { JsonDocumentExample, JsonSchema } from '@shared/document'
+import type { JsonDocumentVariant, JsonSchema } from '@shared/document'
 
 const schema: JsonSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
@@ -23,7 +23,7 @@ const schema: JsonSchema = {
   },
 }
 
-function example(id: string, value: unknown): JsonDocumentExample {
+function example(id: string, value: unknown): JsonDocumentVariant {
   return { id, name: id, data: JSON.stringify(value), createdAt: 1 }
 }
 
@@ -69,12 +69,12 @@ describe('JSON Schema adapter', () => {
   })
 
   it('reports stable per-example Ajv diagnostics', () => {
-    const diagnostics = validateExamplesAgainstSchema(
+    const diagnostics = validateVariantsAgainstSchema(
       [example('bad', { id: 1 })],
       schema,
     )
     expect(diagnostics[0]).toMatchObject({
-      exampleId: 'bad',
+      variantId: 'bad',
       instancePointer: '/id',
       code: 'typeMismatch',
       expected: 'string',
@@ -83,7 +83,7 @@ describe('JSON Schema adapter', () => {
   })
 
   it('preserves allowed values for editor quick fixes', () => {
-    const diagnostics = validateExamplesAgainstSchema(
+    const diagnostics = validateVariantsAgainstSchema(
       [example('bad', { id: 'unknown' })],
       {
         type: 'object',
@@ -99,7 +99,7 @@ describe('JSON Schema adapter', () => {
   })
 
   it('normalizes required and unexpected-property diagnostics', () => {
-    const diagnostics = validateExamplesAgainstSchema(
+    const diagnostics = validateVariantsAgainstSchema(
       [example('bad', { extra: true })],
       {
         type: 'object',

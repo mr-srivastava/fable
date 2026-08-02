@@ -12,7 +12,7 @@ export function MarketingHero() {
           specimens
         </h1>
         <p className="animate-fade-in-up-delay-1 mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Edit examples, infer field metadata, annotate your contract, and share
+          Edit variants, infer field metadata, annotate your contract, and share
           stable links — built for API payloads and integration fixtures.
         </p>
       </div>

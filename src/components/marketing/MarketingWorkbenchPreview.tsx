@@ -52,7 +52,7 @@ export function MarketingWorkbenchPreview() {
 
           <div className="flex items-center gap-2 border-b pb-2">
             <span className="rounded-md border bg-background px-3 py-1.5 text-xs font-medium">
-              Example 1
+              Variant 1
             </span>
           </div>
 

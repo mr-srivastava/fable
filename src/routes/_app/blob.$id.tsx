@@ -14,7 +14,7 @@ import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
 import { createConvexPersistAdapter } from '@/lib/convex-persist-adapter'
 import { createDocumentDraft } from '@/lib/document-draft'
-import { normalizeDocumentExamples } from '@/lib/document-examples'
+import { normalizeDocumentVariants } from '@/lib/document-variants'
 
 export const Route = createFileRoute('/_app/blob/$id')({
   component: ViewDocument,
@@ -44,7 +44,7 @@ function DocumentEditor({
   const initialDraft = useMemo(
     () =>
       createDocumentDraft(
-        normalizeDocumentExamples(document),
+        normalizeDocumentVariants(document),
         document.contract ? parseJsonContract(document.contract) : undefined,
         document.jsonSchemaJson
           ? parseSerializedJsonSchema(document.jsonSchemaJson)

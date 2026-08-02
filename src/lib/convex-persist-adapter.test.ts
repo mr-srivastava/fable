@@ -7,7 +7,7 @@ import {
 } from '@/lib/convex-persist-adapter'
 
 const writeInput: DocumentWriteInput = {
-  examples: [
+  variants: [
     {
       id: 'one',
       name: 'One',
@@ -27,7 +27,7 @@ const writeInput: DocumentWriteInput = {
 describe('convex persist adapter', () => {
   it('serializes JSON schema for Convex writes', () => {
     expect(toConvexDocumentWriteArgs(writeInput)).toEqual({
-      examples: writeInput.examples,
+      variants: writeInput.variants,
       contractOverrides: writeInput.contractOverrides,
       jsonSchemaJson: serializeJsonSchema(writeInput.jsonSchema),
     })

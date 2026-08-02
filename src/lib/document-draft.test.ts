@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_EXAMPLES_PER_DOCUMENT } from '@shared/document-limits'
+import { MAX_VARIANTS_PER_DOCUMENT } from '@shared/document-limits'
 import {
-  addDraftExample,
+  addDraftVariant,
   applyDraftInference,
   createDocumentDraft,
-  getActiveExample,
+  getActiveVariant,
   getDocumentDraftSnapshot,
   prepareDocumentWrite,
-  removeDraftExample,
-  renameDraftExample,
+  removeDraftVariant,
+  renameDraftVariant,
   updateDraftContractOverride,
-  updateDraftExample,
+  updateDraftVariant,
 } from '@/lib/document-draft'
-import { buildDraftExample, readyDraft } from '@/test/factories/document-draft'
+import { buildDraftVariant, readyDraft } from '@/test/factories/document-draft'
 import {
   draftIdAndNameSchema,
   draftIdNumberSchema,
@@ -24,7 +24,7 @@ import {
 describe('document draft', () => {
   it('updates examples and preserves editable contract metadata', () => {
     const initial = readyDraft(
-      [buildDraftExample('one', { id: '1' })],
+      [buildDraftVariant('one', { id: '1' })],
       draftIdStringSchema,
     )
     const idField = initial.contract?.fields.find(
@@ -42,7 +42,7 @@ describe('document draft', () => {
       pointer: idField!.schemaPointer!,
       enumValues: ['1', '2'],
     })
-    const changed = updateDraftExample(
+    const changed = updateDraftVariant(
       annotated,
       'one',
       JSON.stringify({ id: '2', name: 'Avery' }),
@@ -62,47 +62,47 @@ describe('document draft', () => {
   })
 
   it('disables contract analysis while any example is invalid', () => {
-    const initial = createDocumentDraft([buildDraftExample('one', { id: '1' })])
-    const invalid = updateDraftExample(initial, 'one', '{', 2)
+    const initial = createDocumentDraft([buildDraftVariant('one', { id: '1' })])
+    const invalid = updateDraftVariant(initial, 'one', '{', 2)
 
     expect(invalid.diagnostics).toBeUndefined()
     expect(invalid.contract).toEqual(initial.contract)
   })
 
   it('selects a newly added example and selects the first after deletion', () => {
-    const initial = createDocumentDraft([buildDraftExample('one', { id: '1' })])
-    const added = addDraftExample(
+    const initial = createDocumentDraft([buildDraftVariant('one', { id: '1' })])
+    const added = addDraftVariant(
       initial,
-      buildDraftExample('two', { id: '2' }),
+      buildDraftVariant('two', { id: '2' }),
     )
-    const removed = removeDraftExample(added, 'two')
+    const removed = removeDraftVariant(added, 'two')
 
-    expect(getActiveExample(added).id).toBe('two')
-    expect(getActiveExample(removed).id).toBe('one')
+    expect(getActiveVariant(added).id).toBe('two')
+    expect(getActiveVariant(removed).id).toBe('one')
   })
 
   it('does not remove the final example', () => {
-    const initial = createDocumentDraft([buildDraftExample('one', { id: '1' })])
-    expect(removeDraftExample(initial, 'one')).toBe(initial)
+    const initial = createDocumentDraft([buildDraftVariant('one', { id: '1' })])
+    expect(removeDraftVariant(initial, 'one')).toBe(initial)
   })
 
   it('does not add examples beyond the document limit', () => {
     const initial = createDocumentDraft(
-      Array.from({ length: MAX_EXAMPLES_PER_DOCUMENT }, (_, index) =>
-        buildDraftExample(String(index), { index }),
+      Array.from({ length: MAX_VARIANTS_PER_DOCUMENT }, (_, index) =>
+        buildDraftVariant(String(index), { index }),
       ),
     )
 
-    expect(addDraftExample(initial, buildDraftExample('extra', {}))).toBe(
+    expect(addDraftVariant(initial, buildDraftVariant('extra', {}))).toBe(
       initial,
     )
   })
 
   it('renames without recomputing the contract', () => {
-    const initial = createDocumentDraft([buildDraftExample('one', { id: '1' })])
-    const renamed = renameDraftExample(initial, 'one', 'Success', 2)
+    const initial = createDocumentDraft([buildDraftVariant('one', { id: '1' })])
+    const renamed = renameDraftVariant(initial, 'one', 'Success', 2)
 
-    expect(renamed.examples[0]).toMatchObject({
+    expect(renamed.variants[0]).toMatchObject({
       name: 'Success',
       updatedAt: 2,
     })
@@ -112,31 +112,31 @@ describe('document draft', () => {
   it('prepares one canonical persistence input', () => {
     const draft = readyDraft(
       [
-        buildDraftExample('one', { id: '1' }),
-        buildDraftExample('two', { id: '2' }),
+        buildDraftVariant('one', { id: '1' }),
+        buildDraftVariant('two', { id: '2' }),
       ],
       draftIdStringSchema,
     )
 
     expect(prepareDocumentWrite(draft)).toMatchObject({
-      examples: draft.examples,
+      variants: draft.variants,
       jsonSchema: draft.jsonSchema,
       contractOverrides: draft.contractOverrides,
     })
   })
 
   it('rejects invalid drafts before persistence', () => {
-    const initial = createDocumentDraft([buildDraftExample('one', { id: '1' })])
-    const invalid = updateDraftExample(initial, 'one', '{', 2)
+    const initial = createDocumentDraft([buildDraftVariant('one', { id: '1' })])
+    const invalid = updateDraftVariant(initial, 'one', '{', 2)
 
     expect(() => prepareDocumentWrite(invalid)).toThrow(
-      'All examples must contain valid JSON',
+      'All variants must contain valid JSON',
     )
   })
 
   it('treats edited enum values as authoritative constraints', () => {
     const initial = readyDraft(
-      [buildDraftExample('one', { status: 'ok' })],
+      [buildDraftVariant('one', { status: 'ok' })],
       draftStatusSchema,
     )
     const field = initial.contract!.fields.find(
@@ -149,16 +149,16 @@ describe('document draft', () => {
     })
 
     expect(constrained.schemaDiagnostics).toEqual([
-      expect.objectContaining({ exampleId: 'one', fieldPointer: '/status' }),
+      expect.objectContaining({ variantId: 'one', fieldPointer: '/status' }),
     ])
     expect(() => prepareDocumentWrite(constrained)).toThrow(
-      'All examples must satisfy the contract',
+      'All variants must satisfy the contract',
     )
   })
 
   it('applies required overrides directly and clears them when matching inference', () => {
     const initial = readyDraft(
-      [buildDraftExample('one', { id: '1' }), buildDraftExample('two', {})],
+      [buildDraftVariant('one', { id: '1' }), buildDraftVariant('two', {})],
       draftIdOptionalSchema,
     )
     const field = initial.contract!.fields.find((item) => item.path === 'id')!
@@ -191,7 +191,7 @@ describe('document draft', () => {
 
   it('applies nullable overrides directly and clears them when matching inference', () => {
     const initial = readyDraft(
-      [buildDraftExample('one', { id: '1' })],
+      [buildDraftVariant('one', { id: '1' })],
       draftIdStringSchema,
     )
     const field = initial.contract!.fields.find((item) => item.path === 'id')!
@@ -225,7 +225,7 @@ describe('document draft', () => {
 
   it('ignores override changes for unknown schema pointers', () => {
     const initial = readyDraft(
-      [buildDraftExample('one', { id: '1' })],
+      [buildDraftVariant('one', { id: '1' })],
       draftIdStringSchema,
     )
     const unchanged = updateDraftContractOverride(initial, {
@@ -239,16 +239,16 @@ describe('document draft', () => {
 
   it('retains the last schema when examples change', () => {
     const initial = readyDraft(
-      [buildDraftExample('one', { id: 1 })],
+      [buildDraftVariant('one', { id: 1 })],
       draftIdNumberSchema,
     )
-    const changed = updateDraftExample(initial, 'one', '{"id":2}', 2)
+    const changed = updateDraftVariant(initial, 'one', '{"id":2}', 2)
 
     expect(changed.jsonSchema).toBe(initial.jsonSchema)
   })
 
   it('produces stable snapshots for dirty-state comparison', () => {
-    const initial = createDocumentDraft([buildDraftExample('one', { id: '1' })])
+    const initial = createDocumentDraft([buildDraftVariant('one', { id: '1' })])
     expect(getDocumentDraftSnapshot(initial)).toBe(
       getDocumentDraftSnapshot(initial),
     )

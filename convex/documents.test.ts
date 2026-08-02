@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { api, internal } from './_generated/api'
 import { createConvexTest } from './test.setup'
 
-const firstExample = {
+const firstVariant = {
   id: 'one',
   name: 'Success',
   data: '{"id":"one"}',
@@ -14,14 +14,14 @@ describe('documents', () => {
     const t = createConvexTest()
 
     const id = await t.action(api.documentWrites.create, {
-      examples: [firstExample],
+      variants: [firstVariant],
     })
     const document = await t.query(api.documents.get, { id })
 
     expect(document).toMatchObject({
       _id: id,
-      data: firstExample.data,
-      examples: [firstExample],
+      data: firstVariant.data,
+      variants: [firstVariant],
       size: 12,
       metadata: { version: 1 },
     })
@@ -32,10 +32,10 @@ describe('documents', () => {
   it('updates derived projections, schema, and overrides', async () => {
     const t = createConvexTest()
     const id = await t.action(api.documentWrites.create, {
-      examples: [firstExample],
+      variants: [firstVariant],
     })
-    const updatedExample = {
-      ...firstExample,
+    const updatedVariant = {
+      ...firstVariant,
       data: '{"id":"two"}',
       updatedAt: 2,
     }
@@ -47,15 +47,15 @@ describe('documents', () => {
 
     await t.action(api.documentWrites.update, {
       id,
-      examples: [updatedExample],
+      variants: [updatedVariant],
       jsonSchemaJson,
       contractOverrides: [{ pointer: '/id', description: 'Stable identifier' }],
     })
     const document = await t.query(api.documents.get, { id })
 
     expect(document).toMatchObject({
-      data: updatedExample.data,
-      examples: [updatedExample],
+      data: updatedVariant.data,
+      variants: [updatedVariant],
       metadata: { version: 3 },
       contractOverrides: [{ pointer: '/id', description: 'Stable identifier' }],
     })
@@ -71,6 +71,27 @@ describe('documents', () => {
         description: 'Stable identifier',
       }),
     ])
+  })
+
+  it('normalizes legacy examples into variants when reading old records', async () => {
+    const t = createConvexTest()
+    const legacyVariant = {
+      id: 'legacy-one',
+      name: 'Legacy',
+      data: '{"legacy":true}',
+      createdAt: 1,
+    }
+    const id = await t.run((ctx) =>
+      ctx.db.insert('documents', {
+        data: legacyVariant.data,
+        examples: [legacyVariant],
+        size: 15,
+      }),
+    )
+
+    const document = await t.query(api.documents.get, { id })
+
+    expect(document?.variants).toEqual([legacyVariant])
   })
 
   it('normalizes the legacy object schema when reading old records', async () => {
@@ -96,7 +117,7 @@ describe('documents', () => {
   it('deletes a document through the internal mutation', async () => {
     const t = createConvexTest()
     const id = await t.action(api.documentWrites.create, {
-      examples: [firstExample],
+      variants: [firstVariant],
     })
 
     await t.mutation(internal.documents.remove, { id })
@@ -109,7 +130,7 @@ describe('documents', () => {
 
     await expect(
       t.action(api.documentWrites.create, {
-        examples: [{ ...firstExample, data: '{' }],
+        variants: [{ ...firstVariant, data: '{' }],
       }),
     ).rejects.toThrow('Invalid JSON')
 

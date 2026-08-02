@@ -1,21 +1,21 @@
-import type { JsonContract, JsonDocumentExample } from '@shared/document'
+import type { JsonContract, JsonDocumentVariant } from '@shared/document'
 
 export type ContractWarningSeverity = 'none' | 'warning'
 
-export type ContractExampleGroup = {
+export type ContractVariantGroup = {
   id: string
-  exampleIds: Array<string>
+  variantIds: Array<string>
 }
 
 export type ContractDiagnostics = {
   severity: ContractWarningSeverity
   similarityScore: number
   sharedEnvelopeFields: Array<string>
-  divergentGroups: Array<ContractExampleGroup>
+  divergentGroups: Array<ContractVariantGroup>
   optionalFieldRatio: number
 }
 
-type ExampleShape = {
+type VariantShape = {
   id: string
   paths: Set<string>
   topLevelFields: Set<string>
@@ -75,23 +75,23 @@ function collectShape(
   }
 }
 
-function getExampleShapes(
-  examples: Array<JsonDocumentExample>,
-): Array<ExampleShape> {
-  return examples.map((example) => {
+function getVariantShapes(
+  variants: Array<JsonDocumentVariant>,
+): Array<VariantShape> {
+  return variants.map((variant) => {
     const paths = new Set<string>()
     const topLevelFields = new Set<string>()
     const discriminatorFields = new Set<string>()
 
     collectShape(
-      JSON.parse(example.data),
+      JSON.parse(variant.data),
       '',
       paths,
       topLevelFields,
       discriminatorFields,
     )
 
-    return { id: example.id, paths, topLevelFields, discriminatorFields }
+    return { id: variant.id, paths, topLevelFields, discriminatorFields }
   })
 }
 
@@ -104,7 +104,7 @@ function getOverlap(left: Set<string>, right: Set<string>) {
 }
 
 function getSharedFields(
-  shapes: Array<ExampleShape>,
+  shapes: Array<VariantShape>,
   field: 'topLevelFields' | 'discriminatorFields',
 ) {
   if (shapes.length === 0) return []
@@ -114,7 +114,7 @@ function getSharedFields(
 }
 
 function getAveragePairwiseOverlap(
-  shapes: Array<ExampleShape>,
+  shapes: Array<VariantShape>,
   field: 'paths' | 'topLevelFields',
 ) {
   if (shapes.length < 2) return 1
@@ -135,8 +135,8 @@ function getAveragePairwiseOverlap(
   return total / count
 }
 
-function getDivergentGroups(shapes: Array<ExampleShape>) {
-  const groups: Array<ContractExampleGroup> = []
+function getDivergentGroups(shapes: Array<VariantShape>) {
+  const groups: Array<ContractVariantGroup> = []
   const visited = new Set<string>()
 
   for (const shape of shapes) {
@@ -154,17 +154,17 @@ function getDivergentGroups(shapes: Array<ExampleShape>) {
       }
     }
 
-    groups.push({ id: groupIds.join(':'), exampleIds: groupIds })
+    groups.push({ id: groupIds.join(':'), variantIds: groupIds })
   }
 
   return groups
 }
 
 export function analyzeContractCompatibility(
-  examples: Array<JsonDocumentExample>,
+  variants: Array<JsonDocumentVariant>,
   contract: JsonContract,
 ): ContractDiagnostics {
-  const shapes = getExampleShapes(examples)
+  const shapes = getVariantShapes(variants)
   const sharedTopLevelFields = getSharedFields(shapes, 'topLevelFields')
   const sharedEnvelopeFields = sharedTopLevelFields.filter((field) =>
     ENVELOPE_FIELDS.has(field),
@@ -182,7 +182,7 @@ export function analyzeContractCompatibility(
     : 0
   const divergentGroups = getDivergentGroups(shapes)
   const looksDivergent =
-    examples.length > 1 &&
+    variants.length > 1 &&
     sharedEnvelopeFields.length < 2 &&
     !hasSharedDiscriminator &&
     similarityScore < SIMILARITY_THRESHOLD &&

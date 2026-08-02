@@ -3,13 +3,15 @@ import { v } from 'convex/values'
 import {
   contractFieldOverrideValidator,
   documentContractValidator,
-  documentExampleValidator,
+  documentVariantValidator,
 } from './documentModel'
 
 export default defineSchema({
   documents: defineTable({
     data: v.string(),
-    examples: v.optional(v.array(documentExampleValidator)),
+    variants: v.optional(v.array(documentVariantValidator)),
+    // Legacy field. New writes use `variants`.
+    examples: v.optional(v.array(documentVariantValidator)),
     size: v.number(),
     totalSize: v.optional(v.number()),
     updatedAt: v.optional(v.number()),

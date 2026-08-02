@@ -4,7 +4,7 @@ import {
   draftHasUsableEffectiveSchema,
 } from './document-editor-capabilities'
 import { createDocumentDraft } from '@/lib/document-draft'
-import { buildDocumentExample } from '@/test/factories/document'
+import { buildDocumentVariant } from '@/test/factories/document'
 import {
   buildDocumentEditorSnapshot,
   buildInvalidJsonEditorSnapshot,
@@ -17,7 +17,7 @@ describe('document editor capabilities', () => {
       buildDocumentEditorSnapshot({
         analysis: 'debouncing',
         draft: createDocumentDraft([
-          buildDocumentExample({ data: '{"id":1}' }),
+          buildDocumentVariant({ data: '{"id":1}' }),
         ]),
       }),
     )
@@ -73,7 +73,7 @@ describe('document editor capabilities', () => {
       buildDocumentEditorSnapshot({
         analysis: 'failed',
         draft: createDocumentDraft([
-          buildDocumentExample({ data: '{"id":1}' }),
+          buildDocumentVariant({ data: '{"id":1}' }),
         ]),
         analysisError: 'Quicktype failed',
       }),

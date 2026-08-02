@@ -12,7 +12,7 @@ import {
 } from '@/lib/document-draft'
 import {
   advanceDocumentEditorToReady,
-  buildMachineExample,
+  buildMachineVariant,
   createDocumentEditorActor,
   testStatusSchema,
 } from '@/test/factories/document-editor'
@@ -21,18 +21,18 @@ function draftChangeEvent(
   type: (typeof DRAFT_MUTATION_EVENTS)[number],
 ): DocumentEditorEvent {
   switch (type) {
-    case 'example.jsonChanged':
+    case 'variant.jsonChanged':
       return {
         type,
-        exampleId: 'example-1',
+        variantId: 'variant-1',
         json: '{"status":"changed"}',
       }
-    case 'example.renamed':
-      return { type, exampleId: 'example-1', name: 'Renamed' }
-    case 'example.added':
+    case 'variant.renamed':
+      return { type, variantId: 'variant-1', name: 'Renamed' }
+    case 'variant.added':
       return { type }
-    case 'example.removed':
-      return { type, exampleId: 'example-1' }
+    case 'variant.removed':
+      return { type, variantId: 'variant-1' }
     case 'contract.overrideChanged':
       return {
         type,
@@ -73,8 +73,8 @@ describe('documentEditorMachine', () => {
     const lastSchema = actor.getSnapshot().context.draft.jsonSchema
 
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{',
     })
 
@@ -90,8 +90,8 @@ describe('documentEditorMachine', () => {
     await advanceDocumentEditorToReady(actor)
 
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"changed"}',
     })
     actor.send({ type: 'document.submitRequested' })
@@ -115,8 +115,8 @@ describe('documentEditorMachine', () => {
     expect(actor.getSnapshot().matches({ analysis: 'inferring' })).toBe(true)
 
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"new"}',
     })
 
@@ -135,7 +135,7 @@ describe('documentEditorMachine', () => {
     await waitFor(actor, (snapshot) => snapshot.matches({ analysis: 'failed' }))
 
     expect(actor.getSnapshot().context.analysisError).toBe('Quicktype failed')
-    expect(actor.getSnapshot().context.draft.examples).toHaveLength(1)
+    expect(actor.getSnapshot().context.draft.variants).toHaveLength(1)
     actor.stop()
   })
 
@@ -205,8 +205,8 @@ describe('documentEditorMachine', () => {
 
     actor.send({ type: 'document.submitRequested' })
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"edited while saving"}',
     })
 
@@ -235,8 +235,8 @@ describe('documentEditorMachine', () => {
 
     actor.send({ type: 'export.typescriptRequested' })
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"changed"}',
     })
 
@@ -294,9 +294,9 @@ describe('documentEditorMachine', () => {
       vi.useFakeTimers()
       const { actor } = createDocumentEditorActor({
         initialDraft: createDocumentDraft([
-          buildMachineExample(),
-          buildMachineExample('{"status":"ok"}', {
-            id: 'example-2',
+          buildMachineVariant(),
+          buildMachineVariant('{"status":"ok"}', {
+            id: 'variant-2',
             name: 'Example 2',
             createdAt: 2,
           }),
@@ -323,9 +323,9 @@ describe('documentEditorMachine', () => {
       vi.useFakeTimers()
       const { actor } = createDocumentEditorActor({
         initialDraft: createDocumentDraft([
-          buildMachineExample(),
-          buildMachineExample('{"status":"ok"}', {
-            id: 'example-2',
+          buildMachineVariant(),
+          buildMachineVariant('{"status":"ok"}', {
+            id: 'variant-2',
             name: 'Example 2',
             createdAt: 2,
           }),

@@ -98,15 +98,15 @@ export function useDocumentEditor({
 
   const commands = useMemo<DocumentEditorCommands>(
     () => ({
-      updateExample: (exampleId, json) =>
-        actorRef.send({ type: 'example.jsonChanged', exampleId, json }),
-      selectExample: (exampleId) =>
-        actorRef.send({ type: 'example.selected', exampleId }),
-      renameExample: (exampleId, name) =>
-        actorRef.send({ type: 'example.renamed', exampleId, name }),
-      addExample: () => actorRef.send({ type: 'example.added' }),
-      removeExample: (exampleId) =>
-        actorRef.send({ type: 'example.removed', exampleId }),
+      updateVariant: (variantId, json) =>
+        actorRef.send({ type: 'variant.jsonChanged', variantId, json }),
+      selectVariant: (variantId) =>
+        actorRef.send({ type: 'variant.selected', variantId }),
+      renameVariant: (variantId, name) =>
+        actorRef.send({ type: 'variant.renamed', variantId, name }),
+      addVariant: () => actorRef.send({ type: 'variant.added' }),
+      removeVariant: (variantId) =>
+        actorRef.send({ type: 'variant.removed', variantId }),
       changeContractOverride: (change) =>
         actorRef.send({ type: 'contract.overrideChanged', change }),
       reset: () => actorRef.send({ type: 'document.reset' }),

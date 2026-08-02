@@ -1,14 +1,14 @@
-import type { JsonDocumentExample, JsonSchema } from '@shared/document'
+import type { JsonDocumentVariant, JsonSchema } from '@shared/document'
 import type { DocumentDraft } from '@/lib/document-draft'
 import { applyDraftInference, createDocumentDraft } from '@/lib/document-draft'
-import { buildDocumentExample } from '@/test/factories/document'
+import { buildDocumentVariant } from '@/test/factories/document'
 
-export function buildDraftExample(
+export function buildDraftVariant(
   id: string,
   value: unknown,
-  overrides: Partial<JsonDocumentExample> = {},
-): JsonDocumentExample {
-  return buildDocumentExample({
+  overrides: Partial<JsonDocumentVariant> = {},
+): JsonDocumentVariant {
+  return buildDocumentVariant({
     id,
     name: id,
     data: JSON.stringify(value),
@@ -18,8 +18,8 @@ export function buildDraftExample(
 }
 
 export function readyDraft(
-  examples: Array<JsonDocumentExample>,
+  variants: Array<JsonDocumentVariant>,
   jsonSchema: JsonSchema,
 ): DocumentDraft {
-  return applyDraftInference(createDocumentDraft(examples), jsonSchema)
+  return applyDraftInference(createDocumentDraft(variants), jsonSchema)
 }

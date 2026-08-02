@@ -5,7 +5,7 @@ import type {
   ContractOverrides,
   JsonContract,
   JsonContractField,
-  JsonDocumentExample,
+  JsonDocumentVariant,
   JsonFieldType,
   JsonSchema,
 } from './document'
@@ -13,7 +13,7 @@ import type {
 export const JSON_SCHEMA_DRAFT_7 = 'http://json-schema.org/draft-07/schema#'
 
 type SchemaValidationDiagnosticBase = {
-  exampleId: string
+  variantId: string
   instancePointer: string
   fieldPointer: string
   rulePointer: string
@@ -308,8 +308,8 @@ export function applyContractOverrides(
   return { jsonSchema, overrides: survivingOverrides }
 }
 
-export function validateExamplesAgainstSchema(
-  examples: Array<JsonDocumentExample>,
+export function validateVariantsAgainstSchema(
+  variants: Array<JsonDocumentVariant>,
   jsonSchema: JsonSchema,
 ): Array<SchemaValidationDiagnostic> {
   let validate: ValidateFunction
@@ -322,8 +322,8 @@ export function validateExamplesAgainstSchema(
     )
   }
 
-  return examples.flatMap((example) => {
-    const value = JSON.parse(example.data)
+  return variants.flatMap((variant) => {
+    const value = JSON.parse(variant.data)
     if (validate(value)) return []
     return (validate.errors ?? []).map((error: ErrorObject) => {
       const missingProperty =
@@ -345,7 +345,7 @@ export function validateExamplesAgainstSchema(
             .map((segment) => (/^\d+$/.test(segment) ? '*' : segment))
             .join('/')
       const base: SchemaValidationDiagnosticBase = {
-        exampleId: example.id,
+        variantId: variant.id,
         instancePointer,
         fieldPointer,
         rulePointer: error.schemaPath,

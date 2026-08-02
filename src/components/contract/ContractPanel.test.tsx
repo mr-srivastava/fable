@@ -28,7 +28,7 @@ describe('ContractPanel path selection', () => {
     )
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      'data.id is not present in this example.',
+      'data.id is not present in this variant.',
     )
     expect(
       screen.getByRole('button', { name: 'Selected field: data.id' }),

@@ -98,13 +98,13 @@ export function ContractPanel({
 
       {!disabled && fields.length > 0 && (
         <p className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          Inferred from all examples. Edited constraints remain authoritative.
+          Inferred from all variants. Edited constraints remain authoritative.
         </p>
       )}
 
       {activeField && !activePointerPresent && (
         <p role="status" className="text-xs text-muted-foreground">
-          <code>{activeField.path}</code> is not present in this example.
+          <code>{activeField.path}</code> is not present in this variant.
         </p>
       )}
 
@@ -119,8 +119,8 @@ export function ContractPanel({
               </EmptyTitle>
               <EmptyDescription>
                 {disabled
-                  ? 'Fix the invalid JSON in the active example to update the contract.'
-                  : 'Add fields to an example to infer editable metadata.'}
+                  ? 'Fix the invalid JSON in the active variant to update the contract.'
+                  : 'Add fields to a variant to infer editable metadata.'}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

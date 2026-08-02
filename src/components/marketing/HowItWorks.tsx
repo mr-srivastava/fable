@@ -4,17 +4,17 @@ const STEPS = [
   {
     title: 'Paste or edit JSON',
     description:
-      'Start with one or more named examples. Specimen validates JSON as you type and keeps every example in sync.',
+      'Start with one or more named variants. Specimen validates JSON as you type and keeps every variant in sync.',
   },
   {
     title: 'Infer a contract',
     description:
-      'Quicktype analyzes all valid examples to infer required fields, nullability, and mixed types across your payload.',
+      'Quicktype analyzes all valid variants to infer required fields, nullability, and mixed types across your payload.',
   },
   {
     title: 'Annotate fields',
     description:
-      'Add descriptions and enumerated values. Compatibility diagnostics flag examples that likely represent different contracts.',
+      'Add descriptions and enumerated values. Compatibility diagnostics flag variants that likely represent different contracts.',
   },
   {
     title: 'Save and share',

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MAX_EXAMPLES_PER_DOCUMENT,
-  MAX_EXAMPLE_BYTES,
+  MAX_VARIANTS_PER_DOCUMENT,
+  MAX_VARIANT_BYTES,
 } from '@shared/document-limits'
 import { prepareDocumentRecord } from '@shared/document-write'
-import type { JsonDocumentExample } from '@shared/document'
+import type { JsonDocumentVariant } from '@shared/document'
 
-function example(id: string, data = '{}'): JsonDocumentExample {
+function example(id: string, data = '{}'): JsonDocumentVariant {
   return { id, name: id, data, createdAt: 1 }
 }
 
@@ -27,7 +27,7 @@ describe('prepareDocumentRecord', () => {
   })
 
   it('rejects oversized examples', () => {
-    const data = JSON.stringify({ value: 'x'.repeat(MAX_EXAMPLE_BYTES) })
+    const data = JSON.stringify({ value: 'x'.repeat(MAX_VARIANT_BYTES) })
     expect(() => prepareDocumentRecord([example('one', data)])).toThrow(
       /^JSON too large:/,
     )
@@ -35,10 +35,10 @@ describe('prepareDocumentRecord', () => {
 
   it('rejects too many examples', () => {
     const examples = Array.from(
-      { length: MAX_EXAMPLES_PER_DOCUMENT + 1 },
+      { length: MAX_VARIANTS_PER_DOCUMENT + 1 },
       (_, index) => example(String(index)),
     )
-    expect(() => prepareDocumentRecord(examples)).toThrow(/^Too many examples:/)
+    expect(() => prepareDocumentRecord(examples)).toThrow(/^Too many variants:/)
   })
 
   it('rejects documents whose combined payload exceeds the total limit', () => {
@@ -65,7 +65,7 @@ describe('prepareDocumentRecord', () => {
         undefined,
         jsonSchema,
       ),
-    ).toThrow('All examples must satisfy the contract')
+    ).toThrow('All variants must satisfy the contract')
   })
 
   it('includes schema and overrides in the total stored size', () => {

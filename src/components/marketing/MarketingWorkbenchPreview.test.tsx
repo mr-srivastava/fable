@@ -13,7 +13,7 @@ describe('MarketingWorkbenchPreview', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Payload')).toBeInTheDocument()
     expect(screen.getByText('Contract Inspector')).toBeInTheDocument()
-    expect(screen.getByText('Example 1')).toBeInTheDocument()
+    expect(screen.getByText('Variant 1')).toBeInTheDocument()
     expect(screen.getByText('user.email')).toBeInTheDocument()
     expect(screen.queryByText('Save & share')).not.toBeInTheDocument()
   })

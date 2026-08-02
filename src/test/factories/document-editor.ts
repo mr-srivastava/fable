@@ -1,7 +1,7 @@
 import { createActor, waitFor } from 'xstate'
 import { vi } from 'vitest'
 import type { Actor } from 'xstate'
-import type { JsonDocumentExample, JsonSchema } from '@shared/document'
+import type { JsonDocumentVariant, JsonSchema } from '@shared/document'
 import type { DocumentEditorSnapshot } from '@/lib/document-editor-capabilities'
 import type {
   DocumentEditorCommands,
@@ -17,19 +17,19 @@ import {
   createDocumentDraft,
   getDocumentDraftSnapshot,
   updateDraftContractOverride,
-  updateDraftExample,
+  updateDraftVariant,
 } from '@/lib/document-draft'
 import { documentEditorMachine } from '@/lib/document-editor-machine'
-import { buildDocumentExample } from '@/test/factories/document'
+import { buildDocumentVariant } from '@/test/factories/document'
 import { testIdNumberSchema, testStatusSchema } from '@/test/factories/schema'
 
 export { testIdNumberSchema, testStatusSchema }
 
 type EditorModelOverrides = Partial<
-  Omit<DocumentEditorViewModel, 'contract' | 'examples' | 'editor'>
+  Omit<DocumentEditorViewModel, 'contract' | 'variants' | 'editor'>
 > & {
   contract?: Partial<DocumentEditorViewModel['contract']>
-  examples?: Partial<DocumentEditorViewModel['examples']>
+  variants?: Partial<DocumentEditorViewModel['variants']>
   editor?: Partial<DocumentEditorViewModel['editor']>
 }
 
@@ -46,7 +46,7 @@ type AnalysisState =
 export function buildDocumentEditorModel(
   overrides: EditorModelOverrides = {},
 ): DocumentEditorViewModel {
-  const { contract, examples, editor, payload, ...modelOverrides } = overrides
+  const { contract, variants, editor, payload, ...modelOverrides } = overrides
   const resolvedPayload = payload ?? {
     status: 'valid' as const,
     value: '{}',
@@ -64,12 +64,12 @@ export function buildDocumentEditorModel(
 
   return {
     payload: resolvedPayload,
-    examples: {
-      items: [buildDocumentExample()],
+    variants: {
+      items: [buildDocumentVariant()],
       activeId: 'one',
       validationCounts: {},
       canAdd: true,
-      ...examples,
+      ...variants,
     },
     contract: {
       status: { type: 'ready' },
@@ -92,11 +92,11 @@ export function buildDocumentEditorCommands(
   overrides: Partial<DocumentEditorCommands> = {},
 ): DocumentEditorCommands {
   return {
-    updateExample: vi.fn(),
-    selectExample: vi.fn(),
-    renameExample: vi.fn(),
-    addExample: vi.fn(),
-    removeExample: vi.fn(),
+    updateVariant: vi.fn(),
+    selectVariant: vi.fn(),
+    renameVariant: vi.fn(),
+    addVariant: vi.fn(),
+    removeVariant: vi.fn(),
     changeContractOverride: vi.fn(),
     reset: vi.fn(),
     submit: vi.fn().mockResolvedValue({ type: 'updated' }),
@@ -105,13 +105,13 @@ export function buildDocumentEditorCommands(
   }
 }
 
-export function buildMachineExample(
+export function buildMachineVariant(
   data = '{"status":"ok"}',
-  overrides: Partial<JsonDocumentExample> = {},
-): JsonDocumentExample {
+  overrides: Partial<JsonDocumentVariant> = {},
+): JsonDocumentVariant {
   return {
-    id: 'example-1',
-    name: 'Example 1',
+    id: 'variant-1',
+    name: 'Variant 1',
     data,
     createdAt: 1,
     ...overrides,
@@ -137,7 +137,7 @@ export function createDocumentEditorActor(
   schema: JsonSchema = testStatusSchema,
 ) {
   const input: DocumentEditorMachineInput = {
-    initialDraft: createDocumentDraft([buildMachineExample()]),
+    initialDraft: createDocumentDraft([buildMachineVariant()]),
     ...buildDocumentEditorDependencies({}, schema),
     ...overrides,
   }
@@ -159,7 +159,7 @@ export function buildReadyDocumentDraft(
 ): DocumentDraft {
   return applyDraftInference(
     createDocumentDraft([
-      buildDocumentExample({ id: 'one', name: 'One', data }),
+      buildDocumentVariant({ id: 'one', name: 'One', data }),
     ]),
     schema,
   )
@@ -193,7 +193,7 @@ export function buildDocumentEditorSnapshot(options: {
 
 export function buildInvalidJsonEditorSnapshot(): DocumentEditorSnapshot {
   const readyDraft = buildReadyDocumentDraft()
-  const invalidDraft = updateDraftExample(readyDraft, 'one', '{')
+  const invalidDraft = updateDraftVariant(readyDraft, 'one', '{')
   return buildDocumentEditorSnapshot({
     analysis: 'invalidJson',
     draft: invalidDraft,

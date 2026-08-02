@@ -1,7 +1,7 @@
 import parseJson from 'json-parse-even-better-errors'
-import { MAX_EXAMPLE_BYTES, getUtf8Size } from '@shared/document-limits'
+import { MAX_VARIANT_BYTES, getUtf8Size } from '@shared/document-limits'
 
-export const MAX_JSON_SIZE = MAX_EXAMPLE_BYTES
+export const MAX_JSON_SIZE = MAX_VARIANT_BYTES
 
 export type ParseJsonResult =
   | { ok: true; value: unknown; size: number }

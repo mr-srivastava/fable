@@ -1,6 +1,6 @@
 import type { DocumentDraft } from '@/lib/document-draft'
 import type { documentEditorMachine } from '@/lib/document-editor-machine'
-import { documentExamplesAreValid } from '@/lib/document-draft'
+import { documentVariantsAreValid } from '@/lib/document-draft'
 
 export type DocumentEditorSnapshot = ReturnType<
   typeof documentEditorMachine.getInitialSnapshot
@@ -18,7 +18,7 @@ export type DocumentEditorCapabilities = {
 
 export function draftHasUsableEffectiveSchema(draft: DocumentDraft) {
   return (
-    documentExamplesAreValid(draft.examples) &&
+    documentVariantsAreValid(draft.variants) &&
     Boolean(draft.jsonSchema) &&
     Boolean(draft.contract) &&
     draft.schemaDiagnostics.length === 0

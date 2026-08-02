@@ -1,8 +1,8 @@
-import { MAX_EXAMPLES_PER_DOCUMENT } from '@shared/document-limits'
+import { MAX_VARIANTS_PER_DOCUMENT } from '@shared/document-limits'
 import type {
   JsonContract,
   JsonContractField,
-  JsonDocumentExample,
+  JsonDocumentVariant,
 } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
 import type { ContractDiagnostics } from '@/lib/contract/compatibilityDiagnostics'
@@ -11,7 +11,7 @@ import type { DocumentPersistenceResult } from '@/lib/document-editor-machine'
 import type { DocumentEditorSnapshot } from '@/lib/document-editor-capabilities'
 import { deriveDocumentEditorCapabilities } from '@/lib/document-editor-capabilities'
 import {
-  getActiveExample,
+  getActiveVariant,
   getDocumentDraftSnapshot,
 } from '@/lib/document-draft'
 import { parseJsonSafely } from '@/lib/json'
@@ -78,8 +78,8 @@ export type DocumentEditorValidation =
 
 export type DocumentEditorViewModel = {
   payload: PayloadViewState
-  examples: {
-    items: Array<JsonDocumentExample>
+  variants: {
+    items: Array<JsonDocumentVariant>
     activeId: string
     validationCounts: Record<string, number>
     canAdd: boolean
@@ -95,11 +95,11 @@ export type DocumentEditorViewModel = {
 }
 
 export type DocumentEditorCommands = {
-  updateExample: (exampleId: string, json: string) => void
-  selectExample: (exampleId: string) => void
-  renameExample: (exampleId: string, name: string) => void
-  addExample: () => void
-  removeExample: (exampleId: string) => void
+  updateVariant: (variantId: string, json: string) => void
+  selectVariant: (variantId: string) => void
+  renameVariant: (variantId: string, name: string) => void
+  addVariant: () => void
+  removeVariant: (variantId: string) => void
   changeContractOverride: (change: ContractOverrideChange) => void
   reset: () => void
   submit: () => Promise<DocumentPersistenceResult>
@@ -179,7 +179,7 @@ function getExportState(snapshot: DocumentEditorSnapshot): ExportViewState {
 
 function getEditorAssistance(
   contract: ContractEditorViewModel,
-  activeExampleId: string,
+  activeVariantId: string,
 ): DocumentEditorAssistance {
   if (!contract.value) return { status: 'unavailable' }
   if (contract.valueFreshness === 'current') {
@@ -188,7 +188,7 @@ function getEditorAssistance(
       freshness: 'current',
       fields: contract.value.fields,
       diagnostics: contract.schemaDiagnostics.filter(
-        (diagnostic) => diagnostic.exampleId === activeExampleId,
+        (diagnostic) => diagnostic.variantId === activeVariantId,
       ),
     }
   }
@@ -211,17 +211,17 @@ export function createDocumentEditorViewModel(
   snapshot: DocumentEditorSnapshot,
 ): DocumentEditorViewModel {
   const { draft } = snapshot.context
-  const activeExample = getActiveExample(draft)
-  const parsed = parseJsonSafely(activeExample.data)
+  const activeVariant = getActiveVariant(draft)
+  const parsed = parseJsonSafely(activeVariant.data)
   const capabilities = deriveDocumentEditorCapabilities(snapshot)
-  const payload: PayloadViewState = !activeExample.data.trim()
-    ? { status: 'waiting', value: activeExample.data, size: 0 }
+  const payload: PayloadViewState = !activeVariant.data.trim()
+    ? { status: 'waiting', value: activeVariant.data, size: 0 }
     : parsed.ok
-      ? { status: 'valid', value: activeExample.data, size: parsed.size }
+      ? { status: 'valid', value: activeVariant.data, size: parsed.size }
       : {
           status: 'invalid',
           reason: parsed.reason,
-          value: activeExample.data,
+          value: activeVariant.data,
           message: parsed.error,
           size: parsed.size,
         }
@@ -235,22 +235,22 @@ export function createDocumentEditorViewModel(
 
   return {
     payload,
-    examples: {
-      items: draft.examples,
-      activeId: draft.activeExampleId,
+    variants: {
+      items: draft.variants,
+      activeId: draft.activeVariantId,
       validationCounts: Object.fromEntries(
-        draft.examples.map((example) => [
-          example.id,
+        draft.variants.map((variant) => [
+          variant.id,
           draft.schemaDiagnostics.filter(
-            (diagnostic) => diagnostic.exampleId === example.id,
+            (diagnostic) => diagnostic.variantId === variant.id,
           ).length,
         ]),
       ),
-      canAdd: draft.examples.length < MAX_EXAMPLES_PER_DOCUMENT,
+      canAdd: draft.variants.length < MAX_VARIANTS_PER_DOCUMENT,
     },
     contract,
     editor: {
-      assistance: getEditorAssistance(contract, draft.activeExampleId),
+      assistance: getEditorAssistance(contract, draft.activeVariantId),
       validation: getEditorValidation(payload),
     },
     submission: getSubmissionState(snapshot),

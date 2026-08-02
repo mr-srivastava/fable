@@ -1,11 +1,11 @@
-import type { JsonDocumentExample } from '@shared/document'
+import type { JsonDocumentVariant } from '@shared/document'
 
-export function buildDocumentExample(
-  overrides: Partial<JsonDocumentExample> = {},
-): JsonDocumentExample {
+export function buildDocumentVariant(
+  overrides: Partial<JsonDocumentVariant> = {},
+): JsonDocumentVariant {
   return {
     id: 'one',
-    name: 'Example',
+    name: 'Variant',
     data: '{}',
     createdAt: 1,
     ...overrides,

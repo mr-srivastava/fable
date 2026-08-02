@@ -94,7 +94,7 @@ describe('buildContractInspectorState', () => {
       expandedPaths: new Set(['data']),
       schemaDiagnostics: [
         {
-          exampleId: 'one',
+          variantId: 'one',
           instancePointer: '/data/id',
           fieldPointer: '/properties/data/properties/id',
           rulePointer: '#/properties/data/properties/id/type',

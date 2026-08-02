@@ -1,13 +1,13 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
-import type { ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type {
   JsonEditorGridProps,
   JsonEditorPanelHeaderProps,
   JsonEditorPanelProps,
 } from './JsonEditorPanel.types'
 import { ContractPanel } from '@/components/contract/ContractPanel'
-import { ExamplesTabs } from '@/components/examples/ExamplesTabs'
+import { VariantsTabs } from '@/components/variants/VariantsTabs'
 import { DocumentEditorActions } from '@/components/DocumentEditorActions'
 import { JsonEditor } from '@/components/json-editor/JsonEditor'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -29,7 +29,7 @@ const WORKSPACE_HEIGHT_CLASS =
 
 const CREATE_DEFAULTS = {
   description:
-    'Paste JSON, add examples, annotate the contract, then save & share a stable link.',
+    'Paste JSON, add variants, annotate the contract, then save & share a stable link.',
 } as const
 
 const subscribeToHydration = () => () => undefined
@@ -77,7 +77,10 @@ function WorkbenchShell({
 }) {
   return (
     <div
-      className={cn('workbench-elevated overflow-hidden rounded-2xl bg-card', className)}
+      className={cn(
+        'workbench-elevated overflow-hidden rounded-2xl bg-card',
+        className,
+      )}
     >
       {children}
     </div>
@@ -86,10 +89,10 @@ function WorkbenchShell({
 
 function ContractDiagnosticsNotice({
   contractDiagnostics,
-  examples,
+  variants,
 }: {
   contractDiagnostics?: JsonEditorPanelProps['model']['contract']['diagnostics']
-  examples: JsonEditorPanelProps['model']['examples']['items']
+  variants: JsonEditorPanelProps['model']['variants']['items']
 }) {
   const [dismissed, setDismissed] = useState(false)
   const [showGroups, setShowGroups] = useState(false)
@@ -102,8 +105,8 @@ function ContractDiagnosticsNotice({
     return null
   }
 
-  const exampleNameById = new Map(
-    examples.map((example) => [example.id, example.name]),
+  const variantNameById = new Map(
+    variants.map((variant) => [variant.id, variant.name]),
   )
 
   return (
@@ -112,7 +115,7 @@ function ContractDiagnosticsNotice({
       <AlertTitle>Likely separate contracts</AlertTitle>
       <AlertDescription>
         <p>
-          These examples look like separate response shapes. The contract below
+          These variants look like separate response shapes. The contract below
           is a broad union; consider splitting them into separate specimens.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -150,8 +153,8 @@ function ContractDiagnosticsNotice({
                 {contractDiagnostics.divergentGroups.map((group, index) => (
                   <li key={group.id}>
                     <span className="font-medium">Group {index + 1}:</span>{' '}
-                    {group.exampleIds
-                      .map((id) => exampleNameById.get(id) ?? id)
+                    {group.variantIds
+                      .map((id) => variantNameById.get(id) ?? id)
                       .join(', ')}
                   </li>
                 ))}
@@ -189,7 +192,7 @@ function SchemaStatusNotice({
   return (
     <p role="status" className="text-sm text-destructive">
       {contract.status.count} contract issue
-      {contract.status.count === 1 ? '' : 's'} across the examples. Review the
+      {contract.status.count === 1 ? '' : 's'} across the variants. Review the
       marked values and fields.
     </p>
   )
@@ -202,24 +205,24 @@ function PayloadPanel({
   size,
   assistance,
   pathCoordination,
-  examples,
-  activeExampleId,
-  onSelectExample,
-  onRenameExample,
-  onAddExample,
-  onDeleteExample,
+  variants,
+  activeVariantId,
+  onSelectVariant,
+  onRenameVariant,
+  onAddVariant,
+  onDeleteVariant,
   validationCounts,
-  canAddExample,
+  canAddVariant,
   fillHeight = false,
 }: JsonEditorGridProps & {
-  examples: JsonEditorPanelProps['model']['examples']['items']
-  activeExampleId: string
-  onSelectExample: (id: string) => void
-  onRenameExample: (id: string, name: string) => void
-  onAddExample: () => void
-  onDeleteExample: (id: string) => void
+  variants: JsonEditorPanelProps['model']['variants']['items']
+  activeVariantId: string
+  onSelectVariant: (id: string) => void
+  onRenameVariant: (id: string, name: string) => void
+  onAddVariant: () => void
+  onDeleteVariant: (id: string) => void
   validationCounts: Record<string, number>
-  canAddExample: boolean
+  canAddVariant: boolean
   fillHeight?: boolean
 }) {
   return (
@@ -233,15 +236,15 @@ function PayloadPanel({
       <h2 className="text-base font-semibold tracking-tight text-foreground">
         Payload
       </h2>
-      <ExamplesTabs
-        examples={examples}
-        activeExampleId={activeExampleId}
-        onSelect={onSelectExample}
-        onRename={onRenameExample}
-        onAdd={onAddExample}
-        onDelete={onDeleteExample}
+      <VariantsTabs
+        variants={variants}
+        activeVariantId={activeVariantId}
+        onSelect={onSelectVariant}
+        onRename={onRenameVariant}
+        onAdd={onAddVariant}
+        onDelete={onDeleteVariant}
         validationCounts={validationCounts}
-        canAdd={canAddExample}
+        canAdd={canAddVariant}
         fillHeight={fillHeight}
       >
         <div className={fillHeight ? 'h-full min-h-0' : 'space-y-3'}>
@@ -256,14 +259,14 @@ function PayloadPanel({
             className={fillHeight ? 'h-full min-h-0' : undefined}
           />
         </div>
-      </ExamplesTabs>
+      </VariantsTabs>
     </div>
   )
 }
 
 export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const { model, commands, description: descriptionProp, title, mode } = props
-  const { contract, examples, payload, editor } = model
+  const { contract, variants, payload, editor } = model
   const [activePointer, setActivePointer] = useState<string>()
   const [activePointerPresent, setActivePointerPresent] = useState(true)
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -284,19 +287,19 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const payloadPanel = (
     <PayloadPanel
       value={payload.value}
-      onChange={(json) => commands.updateExample(examples.activeId, json)}
+      onChange={(json) => commands.updateVariant(variants.activeId, json)}
       validation={editor.validation}
       size={payload.size}
       assistance={editor.assistance}
       pathCoordination={pathCoordination}
-      examples={examples.items}
-      activeExampleId={examples.activeId}
-      onSelectExample={commands.selectExample}
-      onRenameExample={commands.renameExample}
-      onAddExample={commands.addExample}
-      onDeleteExample={commands.removeExample}
-      validationCounts={examples.validationCounts}
-      canAddExample={examples.canAdd}
+      variants={variants.items}
+      activeVariantId={variants.activeId}
+      onSelectVariant={commands.selectVariant}
+      onRenameVariant={commands.renameVariant}
+      onAddVariant={commands.addVariant}
+      onDeleteVariant={commands.removeVariant}
+      validationCounts={variants.validationCounts}
+      canAddVariant={variants.canAdd}
       fillHeight={isDesktop}
     />
   )
@@ -309,7 +312,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     >
       <ContractDiagnosticsNotice
         contractDiagnostics={contract.diagnostics}
-        examples={examples.items}
+        variants={variants.items}
       />
       <div className={isDesktop ? 'min-h-0 flex-1' : undefined}>
         <ContractPanel
@@ -362,7 +365,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
               aria-label="Workspace panels"
             >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="payload">Examples</TabsTrigger>
+                <TabsTrigger value="payload">Variants</TabsTrigger>
                 <TabsTrigger value="contract">Contract</TabsTrigger>
               </TabsList>
               <TabsContent value="payload">{payloadPanel}</TabsContent>
