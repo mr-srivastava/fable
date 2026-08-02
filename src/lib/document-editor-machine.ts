@@ -17,6 +17,7 @@ import {
   updateDraftContractOverride,
   updateDraftExample,
 } from '@/lib/document-draft'
+import { draftHasUsableEffectiveSchema } from '@/lib/document-editor-capabilities'
 import { createDocumentExample } from '@/lib/document-examples'
 
 export type DocumentPersistenceResult =
@@ -67,13 +68,44 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
 }
 
-function canUseEffectiveSchema(draft: DocumentDraft) {
-  return (
-    documentExamplesAreValid(draft.examples) &&
-    Boolean(draft.jsonSchema) &&
-    Boolean(draft.contract) &&
-    draft.schemaDiagnostics.length === 0
-  )
+/**
+ * Draft-change event effects by region:
+ * | event                    | analysis             | persistence      | export ready/failed | export generating |
+ * |--------------------------|----------------------|------------------|---------------------|-------------------|
+ * | example.jsonChanged      | update → checking    | clear → idle*    | clear → idle        | cancel → failed   |
+ * | example.renamed          | rename               | clear → idle*    | —                   | —                 |
+ * | example.added            | add → checking       | clear → idle*    | clear → idle        | cancel → failed   |
+ * | example.removed          | remove → checking    | clear → idle*    | clear → idle        | cancel → failed   |
+ * | contract.overrideChanged | override → contract  | clear → idle*    | clear → idle        | cancel → failed   |
+ * | document.reset           | reset → checking     | clear → idle*    | clear → idle        | cancel → failed   |
+ *
+ * * Persistence top-level clears without leaving `saving`; saved/failed also target idle.
+ */
+export const DRAFT_MUTATION_EVENTS = [
+  'example.jsonChanged',
+  'example.renamed',
+  'example.added',
+  'example.removed',
+  'contract.overrideChanged',
+  'document.reset',
+] as const
+
+export const EXPORT_INVALIDATING_EVENTS = [
+  'example.jsonChanged',
+  'example.added',
+  'example.removed',
+  'contract.overrideChanged',
+  'document.reset',
+] as const
+
+function mapEvents<TEvent extends string, THandler>(
+  events: ReadonlyArray<TEvent>,
+  handler: THandler,
+): Record<TEvent, THandler> {
+  return Object.fromEntries(events.map((event) => [event, handler])) as Record<
+    TEvent,
+    THandler
+  >
 }
 
 const inferenceEvents = {
@@ -91,22 +123,24 @@ const inferenceEvents = {
   },
 } as const
 
-const persistenceInvalidationEvents = {
-  'example.jsonChanged': { target: 'idle', actions: 'clearPersistence' },
-  'example.renamed': { target: 'idle', actions: 'clearPersistence' },
-  'example.added': { target: 'idle', actions: 'clearPersistence' },
-  'example.removed': { target: 'idle', actions: 'clearPersistence' },
-  'contract.overrideChanged': { target: 'idle', actions: 'clearPersistence' },
-  'document.reset': { target: 'idle', actions: 'clearPersistence' },
-} as const
+const persistenceClearEvents = mapEvents(DRAFT_MUTATION_EVENTS, {
+  actions: 'clearPersistence',
+} as const)
 
-const exportInvalidationEvents = {
-  'example.jsonChanged': { target: 'idle', actions: 'clearExport' },
-  'example.added': { target: 'idle', actions: 'clearExport' },
-  'example.removed': { target: 'idle', actions: 'clearExport' },
-  'contract.overrideChanged': { target: 'idle', actions: 'clearExport' },
-  'document.reset': { target: 'idle', actions: 'clearExport' },
-} as const
+const persistenceInvalidationEvents = mapEvents(DRAFT_MUTATION_EVENTS, {
+  target: 'idle',
+  actions: 'clearPersistence',
+} as const)
+
+const exportInvalidationEvents = mapEvents(EXPORT_INVALIDATING_EVENTS, {
+  target: 'idle',
+  actions: 'clearExport',
+} as const)
+
+const exportCancellationEvents = mapEvents(EXPORT_INVALIDATING_EVENTS, {
+  target: 'failed',
+  actions: 'cancelExport',
+} as const)
 
 export const documentEditorMachine = setup({
   types: {
@@ -167,11 +201,11 @@ export const documentEditorMachine = setup({
       context.draft.schemaDiagnostics.length > 0,
     canSubmit: and([
       stateIn({ analysis: 'ready' }),
-      ({ context }) => canUseEffectiveSchema(context.draft),
+      ({ context }) => draftHasUsableEffectiveSchema(context.draft),
     ]),
     canExport: and([
       stateIn({ analysis: 'ready' }),
-      ({ context }) => canUseEffectiveSchema(context.draft),
+      ({ context }) => draftHasUsableEffectiveSchema(context.draft),
     ]),
   },
   actions: {
@@ -330,12 +364,7 @@ export const documentEditorMachine = setup({
     persistence: {
       initial: 'idle',
       on: {
-        'example.jsonChanged': { actions: 'clearPersistence' },
-        'example.renamed': { actions: 'clearPersistence' },
-        'example.added': { actions: 'clearPersistence' },
-        'example.removed': { actions: 'clearPersistence' },
-        'contract.overrideChanged': { actions: 'clearPersistence' },
-        'document.reset': { actions: 'clearPersistence' },
+        ...persistenceClearEvents,
       },
       states: {
         idle: {
@@ -407,26 +436,7 @@ export const documentEditorMachine = setup({
         },
         generating: {
           on: {
-            'example.jsonChanged': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'example.added': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'example.removed': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'contract.overrideChanged': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'document.reset': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
+            ...exportCancellationEvents,
           },
           invoke: {
             src: 'generateTypeScript',

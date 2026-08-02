@@ -3,7 +3,7 @@ import type { JsonDocumentExample } from '@shared/document'
 import {
   analyzeExamplesForContract,
   inferContractFromExamples,
-} from '@/lib/contract/inferContract'
+} from '@/lib/contract/compatibilityDiagnostics'
 
 function example(id: string, data: unknown, name = id): JsonDocumentExample {
   return {

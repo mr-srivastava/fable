@@ -5,7 +5,7 @@ import {
   projectJsonSchemaToContract,
   validateExamplesAgainstSchema,
 } from '@shared/json-schema'
-import type { ContractDiagnostics } from '@/lib/contract/inferContract'
+import type { ContractDiagnostics } from '@/lib/contract/compatibilityDiagnostics'
 import type {
   ContractFieldOverride,
   ContractOverrides,
@@ -14,7 +14,7 @@ import type {
   JsonSchema,
 } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
-import { analyzeExamplesForContract } from '@/lib/contract/inferContract'
+import { analyzeExamplesForContract } from '@/lib/contract/compatibilityDiagnostics'
 import { parseJsonSafely } from '@/lib/json'
 
 export type DocumentDraft = {
@@ -221,112 +221,82 @@ export function removeDraftExample(
   }
 }
 
-function applyDraftContractProjection(
-  draft: DocumentDraft,
-  contract: JsonContract,
-): DocumentDraft {
-  if (!draft.inferredJsonSchema || !draft.jsonSchema || !draft.contract)
-    return draft
-  const previousByPointer = new Map(
-    draft.contract.fields.flatMap((field) =>
-      field.schemaPointer ? [[field.schemaPointer, field] as const] : [],
-    ),
-  )
+function applyOverrideChange(
+  overrides: ContractOverrides,
+  change: ContractOverrideChange,
+  inferredJsonSchema: JsonSchema,
+): ContractOverrides | undefined {
+  const inferredField = projectJsonSchemaToContract(
+    inferredJsonSchema,
+  ).fields.find((field) => field.schemaPointer === change.pointer)
+  if (!inferredField) return undefined
+
   const overridesByPointer = new Map(
-    draft.contractOverrides.map((override) => [override.pointer, override]),
+    overrides.map((override) => [override.pointer, override]),
   )
-  const inferredByPointer = new Map(
-    projectJsonSchemaToContract(draft.inferredJsonSchema).fields.flatMap(
-      (field) =>
-        field.schemaPointer ? [[field.schemaPointer, field] as const] : [],
-    ),
-  )
+  const nextOverride: ContractFieldOverride = {
+    ...overridesByPointer.get(change.pointer),
+    pointer: change.pointer,
+  }
 
-  for (const field of contract.fields) {
-    const pointer = field.schemaPointer
-    const previous = pointer ? previousByPointer.get(pointer) : undefined
-    if (!pointer || !previous) continue
-    if (
-      previous.required === field.required &&
-      previous.nullable === field.nullable &&
-      previous.description === field.description &&
-      JSON.stringify(previous.enumValues) === JSON.stringify(field.enumValues)
-    )
-      continue
-
-    const inferred = inferredByPointer.get(pointer)
-    const nextOverride: ContractFieldOverride = {
-      ...overridesByPointer.get(pointer),
-      pointer,
-    }
-    if (previous.required !== field.required) {
-      if (field.required === inferred?.required) delete nextOverride.required
-      else nextOverride.required = field.required
-    }
-    if (previous.nullable !== field.nullable) {
-      if (field.nullable === inferred?.nullable) delete nextOverride.nullable
-      else nextOverride.nullable = field.nullable
-    }
-    if (previous.description !== field.description) {
-      if (field.description === inferred?.description)
-        delete nextOverride.description
-      else nextOverride.description = field.description
-    }
-    if (
-      JSON.stringify(previous.enumValues) !== JSON.stringify(field.enumValues)
-    ) {
+  switch (change.type) {
+    case 'requiredChanged':
+      if (change.required === inferredField.required)
+        delete nextOverride.required
+      else nextOverride.required = change.required
+      break
+    case 'nullableChanged':
+      if (change.nullable === inferredField.nullable)
+        delete nextOverride.nullable
+      else nextOverride.nullable = change.nullable
+      break
+    case 'enumChanged':
       if (
-        JSON.stringify(field.enumValues) ===
-        JSON.stringify(inferred?.enumValues)
+        JSON.stringify(change.enumValues) ===
+        JSON.stringify(inferredField.enumValues)
       ) {
         delete nextOverride.enumValues
       } else {
-        nextOverride.enumValues = field.enumValues
+        nextOverride.enumValues = change.enumValues
       }
-    }
-
-    const hasValues = Object.keys(nextOverride).some((key) => key !== 'pointer')
-    if (hasValues) overridesByPointer.set(pointer, nextOverride)
-    else overridesByPointer.delete(pointer)
+      break
+    case 'descriptionChanged':
+      if (change.description === inferredField.description) {
+        delete nextOverride.description
+      } else {
+        nextOverride.description = change.description
+      }
+      break
   }
 
-  return {
-    ...draft,
-    ...buildSchemaState(draft.examples, draft.inferredJsonSchema, [
-      ...overridesByPointer.values(),
-    ]),
-  }
+  const hasValues = Object.keys(nextOverride).some((key) => key !== 'pointer')
+  if (hasValues) overridesByPointer.set(change.pointer, nextOverride)
+  else overridesByPointer.delete(change.pointer)
+
+  return [...overridesByPointer.values()]
 }
 
 export function updateDraftContractOverride(
   draft: DocumentDraft,
   change: ContractOverrideChange,
 ): DocumentDraft {
-  if (!draft.contract) return draft
-  const field = draft.contract.fields.find(
-    (candidate) => candidate.schemaPointer === change.pointer,
+  if (!draft.inferredJsonSchema) return draft
+
+  const nextOverrides = applyOverrideChange(
+    draft.contractOverrides,
+    change,
+    draft.inferredJsonSchema,
   )
-  if (!field) return draft
+  if (!nextOverrides) return draft
 
-  const nextField = (() => {
-    switch (change.type) {
-      case 'requiredChanged':
-        return { ...field, required: change.required }
-      case 'nullableChanged':
-        return { ...field, nullable: change.nullable }
-      case 'enumChanged':
-        return { ...field, enumValues: change.enumValues }
-      case 'descriptionChanged':
-        return { ...field, description: change.description }
-    }
-  })()
-
-  return applyDraftContractProjection(draft, {
-    ...draft.contract,
-    fields: draft.contract.fields.map((candidate) =>
-      candidate.schemaPointer === change.pointer ? nextField : candidate,
+  return {
+    ...draft,
+    ...buildSchemaState(
+      draft.examples,
+      draft.inferredJsonSchema,
+      nextOverrides,
     ),
-  })
+  }
 }
 
 export function getDocumentDraftSnapshot(draft: DocumentDraft): string {

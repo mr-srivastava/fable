@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useAction } from 'convex/react'
-import { serializeJsonSchema } from '@shared/document'
 import { api } from '../../convex/_generated/api'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
+import { createConvexPersistAdapter } from '@/lib/convex-persist-adapter'
 import { createDocumentDraft } from '@/lib/document-draft'
 import { createDefaultDocumentExamples } from '@/lib/document-examples'
 
@@ -21,15 +21,11 @@ function CreateDocument() {
   const createDocument = useAction(api.documentWrites.create)
   const editor = useDocumentEditor({
     initialDraft,
-    persistDocument: async (input) => {
-      const { jsonSchema, ...documentInput } = input
-      const id = await createDocument({
-        ...documentInput,
-        jsonSchemaJson: serializeJsonSchema(jsonSchema),
-      })
-      navigate({ to: '/blob/$id', params: { id } })
-      return { type: 'created', documentId: id }
-    },
+    persistDocument: createConvexPersistAdapter({
+      mode: 'create',
+      createDocument,
+      onCreated: (id) => navigate({ to: '/blob/$id', params: { id } }),
+    }),
   })
 
   return (

@@ -6,13 +6,13 @@ import {
   parseDocumentId,
   parseJsonContract,
   parseSerializedJsonSchema,
-  serializeJsonSchema,
 } from '@shared/document'
 import { api } from '../../convex/_generated/api'
 import type { FunctionReturnType } from 'convex/server'
 import type { Id } from '../../convex/_generated/dataModel'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
+import { createConvexPersistAdapter } from '@/lib/convex-persist-adapter'
 import { createDocumentDraft } from '@/lib/document-draft'
 import { normalizeDocumentExamples } from '@/lib/document-examples'
 
@@ -55,15 +55,11 @@ function DocumentEditor({
   const updateDocument = useAction(api.documentWrites.update)
   const editor = useDocumentEditor({
     initialDraft,
-    persistDocument: async (input) => {
-      const { jsonSchema, ...documentInput } = input
-      await updateDocument({
-        id,
-        ...documentInput,
-        jsonSchemaJson: serializeJsonSchema(jsonSchema),
-      })
-      return { type: 'updated' }
-    },
+    persistDocument: createConvexPersistAdapter({
+      mode: 'update',
+      documentId: id,
+      updateDocument,
+    }),
   })
 
   useEffect(() => {

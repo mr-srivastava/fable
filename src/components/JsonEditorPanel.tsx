@@ -252,29 +252,11 @@ function PayloadPanel({
 
 export function JsonEditorPanel(props: JsonEditorPanelProps) {
   const { model, commands, description: descriptionProp, title, mode } = props
-  const { contract, examples, payload } = model
+  const { contract, examples, payload, editor } = model
   const [activePointer, setActivePointer] = useState<string>()
   const [activePointerPresent, setActivePointerPresent] = useState(true)
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const hydrated = useHydrated()
-  const assistance = useMemo<JsonEditorGridProps['assistance']>(() => {
-    if (!contract.value) return { status: 'unavailable' }
-    const current = contract.valueFreshness === 'current'
-    return current
-      ? {
-          status: 'available',
-          freshness: 'current',
-          fields: contract.value.fields,
-          diagnostics: contract.schemaDiagnostics.filter(
-            (diagnostic) => diagnostic.exampleId === examples.activeId,
-          ),
-        }
-      : {
-          status: 'available',
-          freshness: 'retained',
-          fields: contract.value.fields,
-        }
-  }, [contract, examples.activeId])
   const pathCoordination = useMemo<JsonEditorGridProps['pathCoordination']>(
     () => ({
       activePointer,
@@ -283,12 +265,6 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     }),
     [activePointer],
   )
-  const validation: JsonEditorGridProps['validation'] =
-    payload.status !== 'invalid'
-      ? { status: 'valid' }
-      : payload.reason === 'syntax'
-        ? { status: 'syntaxError' }
-        : { status: 'externalError', message: payload.message }
 
   const isCreate = mode.type === 'create'
   const description =
@@ -298,9 +274,9 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
     <PayloadPanel
       value={payload.value}
       onChange={(json) => commands.updateExample(examples.activeId, json)}
-      validation={validation}
+      validation={editor.validation}
       size={payload.size}
-      assistance={assistance}
+      assistance={editor.assistance}
       pathCoordination={pathCoordination}
       examples={examples.items}
       activeExampleId={examples.activeId}

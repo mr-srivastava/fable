@@ -8,10 +8,8 @@ import type {
 } from '@/lib/document-editor-machine'
 import type { DocumentEditorCommands } from '@/lib/document-editor-model'
 import { documentEditorMachine } from '@/lib/document-editor-machine'
-import {
-  createDocumentEditorViewModel,
-  documentEditorAnalysisIsUsable,
-} from '@/lib/document-editor-model'
+import { createDocumentEditorViewModel } from '@/lib/document-editor-model'
+import { deriveDocumentEditorCapabilities } from '@/lib/document-editor-capabilities'
 import { ContractWorkerClient } from '@/lib/contract/contract-worker-client'
 
 type UseDocumentEditorInput = {
@@ -63,7 +61,7 @@ export function useDocumentEditor({
 
   const submit = useCallback(async () => {
     const current = actorRef.getSnapshot()
-    if (!documentEditorAnalysisIsUsable(current)) {
+    if (!deriveDocumentEditorCapabilities(current).canSubmit) {
       throw new Error('Document is not ready to save')
     }
     actorRef.send({ type: 'document.submitRequested' })
@@ -83,7 +81,7 @@ export function useDocumentEditor({
 
   const generateTypeScript = useCallback(async () => {
     const current = actorRef.getSnapshot()
-    if (!documentEditorAnalysisIsUsable(current)) {
+    if (!deriveDocumentEditorCapabilities(current).canExport) {
       throw new Error('Contract is not ready')
     }
     actorRef.send({ type: 'export.typescriptRequested' })

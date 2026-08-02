@@ -1,12 +1,15 @@
 import { MAX_EXAMPLES_PER_DOCUMENT } from '@shared/document-limits'
-import type { JsonContract, JsonDocumentExample } from '@shared/document'
-import type { SchemaValidationDiagnostic } from '@shared/json-schema'
-import type { ContractDiagnostics } from '@/lib/contract/inferContract'
-import type { ContractOverrideChange } from '@/lib/document-draft'
 import type {
-  DocumentPersistenceResult,
-  documentEditorMachine,
-} from '@/lib/document-editor-machine'
+  JsonContract,
+  JsonContractField,
+  JsonDocumentExample,
+} from '@shared/document'
+import type { SchemaValidationDiagnostic } from '@shared/json-schema'
+import type { ContractDiagnostics } from '@/lib/contract/compatibilityDiagnostics'
+import type { ContractOverrideChange } from '@/lib/document-draft'
+import type { DocumentPersistenceResult } from '@/lib/document-editor-machine'
+import type { DocumentEditorSnapshot } from '@/lib/document-editor-capabilities'
+import { deriveDocumentEditorCapabilities } from '@/lib/document-editor-capabilities'
 import {
   getActiveExample,
   getDocumentDraftSnapshot,
@@ -55,6 +58,24 @@ export type ExportViewState =
   | { status: 'generating'; jsonSchema: string }
   | { status: 'failed'; jsonSchema: string; message: string }
 
+export type DocumentEditorAssistance =
+  | { status: 'unavailable' }
+  | ({
+      status: 'available'
+      fields: ReadonlyArray<JsonContractField>
+    } & (
+      | {
+          freshness: 'current'
+          diagnostics: ReadonlyArray<SchemaValidationDiagnostic>
+        }
+      | { freshness: 'retained' }
+    ))
+
+export type DocumentEditorValidation =
+  | { status: 'valid' }
+  | { status: 'syntaxError' }
+  | { status: 'externalError'; message: string }
+
 export type DocumentEditorViewModel = {
   payload: PayloadViewState
   examples: {
@@ -64,6 +85,10 @@ export type DocumentEditorViewModel = {
     canAdd: boolean
   }
   contract: ContractEditorViewModel
+  editor: {
+    assistance: DocumentEditorAssistance
+    validation: DocumentEditorValidation
+  }
   submission: SubmissionViewState
   exports: ExportViewState
   hasUnsavedChanges: boolean
@@ -79,19 +104,6 @@ export type DocumentEditorCommands = {
   reset: () => void
   submit: () => Promise<DocumentPersistenceResult>
   generateTypeScript: () => Promise<string>
-}
-
-type DocumentEditorSnapshot = ReturnType<
-  typeof documentEditorMachine.getInitialSnapshot
->
-
-export function documentEditorAnalysisIsUsable(
-  snapshot: DocumentEditorSnapshot,
-) {
-  return (
-    snapshot.matches({ analysis: 'ready' }) &&
-    snapshot.context.draft.schemaDiagnostics.length === 0
-  )
 }
 
 function getContractStatus(
@@ -135,24 +147,20 @@ function getSubmissionState(
       message: snapshot.context.persistenceError ?? 'Failed to save document',
     }
   }
-  if (snapshot.matches({ analysis: 'invalidJson' })) {
-    return { status: 'unavailable', reason: 'invalidJson' }
-  }
-  if (snapshot.matches({ analysis: 'violations' })) {
-    return { status: 'unavailable', reason: 'contractViolations' }
-  }
-  if (snapshot.matches({ analysis: 'failed' })) {
-    return { status: 'unavailable', reason: 'invalidContract' }
-  }
-  if (!documentEditorAnalysisIsUsable(snapshot)) {
-    return { status: 'unavailable', reason: 'inferring' }
+  const capabilities = deriveDocumentEditorCapabilities(snapshot)
+  if (!capabilities.canSubmit) {
+    return {
+      status: 'unavailable',
+      reason: capabilities.blockReason ?? 'inferring',
+    }
   }
   return { status: 'available' }
 }
 
 function getExportState(snapshot: DocumentEditorSnapshot): ExportViewState {
+  const capabilities = deriveDocumentEditorCapabilities(snapshot)
   const schema = snapshot.context.draft.jsonSchema
-  if (!schema || !documentEditorAnalysisIsUsable(snapshot)) {
+  if (!capabilities.canExport || !schema) {
     return { status: 'unavailable' }
   }
   const jsonSchema = `${JSON.stringify(schema, null, 2)}\n`
@@ -169,12 +177,43 @@ function getExportState(snapshot: DocumentEditorSnapshot): ExportViewState {
   return { status: 'available', jsonSchema }
 }
 
+function getEditorAssistance(
+  contract: ContractEditorViewModel,
+  activeExampleId: string,
+): DocumentEditorAssistance {
+  if (!contract.value) return { status: 'unavailable' }
+  if (contract.valueFreshness === 'current') {
+    return {
+      status: 'available',
+      freshness: 'current',
+      fields: contract.value.fields,
+      diagnostics: contract.schemaDiagnostics.filter(
+        (diagnostic) => diagnostic.exampleId === activeExampleId,
+      ),
+    }
+  }
+  return {
+    status: 'available',
+    freshness: 'retained',
+    fields: contract.value.fields,
+  }
+}
+
+function getEditorValidation(
+  payload: PayloadViewState,
+): DocumentEditorValidation {
+  if (payload.status !== 'invalid') return { status: 'valid' }
+  if (payload.reason === 'syntax') return { status: 'syntaxError' }
+  return { status: 'externalError', message: payload.message }
+}
+
 export function createDocumentEditorViewModel(
   snapshot: DocumentEditorSnapshot,
 ): DocumentEditorViewModel {
   const { draft } = snapshot.context
   const activeExample = getActiveExample(draft)
   const parsed = parseJsonSafely(activeExample.data)
+  const capabilities = deriveDocumentEditorCapabilities(snapshot)
   const payload: PayloadViewState = !activeExample.data.trim()
     ? { status: 'waiting', value: activeExample.data, size: 0 }
     : parsed.ok
@@ -186,6 +225,13 @@ export function createDocumentEditorViewModel(
           message: parsed.error,
           size: parsed.size,
         }
+  const contract: ContractEditorViewModel = {
+    value: draft.contract,
+    valueFreshness: capabilities.contractFreshness,
+    status: getContractStatus(snapshot),
+    diagnostics: draft.diagnostics,
+    schemaDiagnostics: draft.schemaDiagnostics,
+  }
 
   return {
     payload,
@@ -202,17 +248,10 @@ export function createDocumentEditorViewModel(
       ),
       canAdd: draft.examples.length < MAX_EXAMPLES_PER_DOCUMENT,
     },
-    contract: {
-      value: draft.contract,
-      valueFreshness: draft.contract
-        ? snapshot.matches({ analysis: 'ready' }) ||
-          snapshot.matches({ analysis: 'violations' })
-          ? 'current'
-          : 'retained'
-        : undefined,
-      status: getContractStatus(snapshot),
-      diagnostics: draft.diagnostics,
-      schemaDiagnostics: draft.schemaDiagnostics,
+    contract,
+    editor: {
+      assistance: getEditorAssistance(contract, draft.activeExampleId),
+      validation: getEditorValidation(payload),
     },
     submission: getSubmissionState(snapshot),
     exports: getExportState(snapshot),

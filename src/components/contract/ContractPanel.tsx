@@ -11,11 +11,8 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  buildContractDisplayRows,
-  getContainerPaths,
-  isContractRowVisible,
-} from '@/lib/contract/contractTree'
+import { buildContractInspectorState } from '@/lib/contract/contractInspectorModel'
+import { getContainerPaths } from '@/lib/contract/contractTree'
 
 const EMPTY_FIELDS: Array<JsonContractField> = []
 
@@ -30,19 +27,6 @@ type ContractPanelProps = {
   fillHeight?: boolean
 }
 
-function getImmediateChildCount(
-  field: JsonContractField,
-  fields: Array<JsonContractField>,
-) {
-  const prefix = `${field.path}.`
-  const depth = field.path.split('.').length
-
-  return fields.filter((candidate) => {
-    if (!candidate.path.startsWith(prefix)) return false
-    return candidate.path.split('.').length === depth + 1
-  }).length
-}
-
 export function ContractPanel({
   contract,
   disabled = false,
@@ -55,27 +39,26 @@ export function ContractPanel({
 }: ContractPanelProps) {
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
   const fields = contract?.fields ?? EMPTY_FIELDS
-  const rows = buildContractDisplayRows(fields)
-  const containerPaths = useMemo(() => getContainerPaths(fields), [fields])
+  const containerPathList = useMemo(() => getContainerPaths(fields), [fields])
   const [expandedPaths, setExpandedPaths] = useState(
-    () => new Set(containerPaths),
+    () => new Set(containerPathList),
+  )
+  const inspector = useMemo(
+    () =>
+      buildContractInspectorState(fields, {
+        expandedPaths,
+        schemaDiagnostics,
+      }),
+    [expandedPaths, fields, schemaDiagnostics],
   )
 
   useEffect(() => {
     setExpandedPaths((current) => {
       const next = new Set(current)
-      for (const path of containerPaths) next.add(path)
+      for (const path of containerPathList) next.add(path)
       return next
     })
-  }, [containerPaths])
-
-  const containerPathSet = useMemo(
-    () => new Set(containerPaths),
-    [containerPaths],
-  )
-  const visibleRows = rows.filter(({ field }) =>
-    isContractRowVisible(field.path, expandedPaths, containerPathSet),
-  )
+  }, [containerPathList])
 
   function toggleTreePath(path: string) {
     setExpandedPaths((current) => {
@@ -99,6 +82,7 @@ export function ContractPanel({
   const activeField = fields.find(
     (field) => field.schemaPointer === activePointer,
   )
+  const visibleRows = inspector.rows.filter((row) => row.visible)
 
   return (
     <section
@@ -146,36 +130,40 @@ export function ContractPanel({
         ) : (
           <ScrollArea className="h-full min-h-0">
             <Accordion multiple className="w-full">
-              {visibleRows.map(({ field, depth, label, isContainer }) => (
-                <ContractFieldReferenceItem
-                  key={field.schemaPointer ?? field.path}
-                  rowRef={(node) => {
-                    const pointer = field.schemaPointer
-                    if (!pointer) return
-                    if (node) rowRefs.current.set(pointer, node)
-                    else rowRefs.current.delete(pointer)
-                  }}
-                  field={field}
-                  depth={depth}
-                  label={label}
-                  isContainer={isContainer}
-                  selected={field.schemaPointer === activePointer}
-                  onSelect={() =>
-                    field.schemaPointer &&
-                    onSelectPointer?.(field.schemaPointer)
-                  }
-                  childCount={
-                    isContainer ? getImmediateChildCount(field, fields) : 0
-                  }
-                  treeExpanded={expandedPaths.has(field.path)}
-                  onTreeToggle={() => toggleTreePath(field.path)}
-                  onOverrideChange={onOverrideChange}
-                  schemaDiagnostics={schemaDiagnostics.filter(
-                    (diagnostic) =>
-                      diagnostic.fieldPointer === field.schemaPointer,
-                  )}
-                />
-              ))}
+              {visibleRows.map(
+                ({
+                  field,
+                  depth,
+                  label,
+                  isContainer,
+                  childCount,
+                  diagnostics,
+                }) => (
+                  <ContractFieldReferenceItem
+                    key={field.schemaPointer ?? field.path}
+                    rowRef={(node) => {
+                      const pointer = field.schemaPointer
+                      if (!pointer) return
+                      if (node) rowRefs.current.set(pointer, node)
+                      else rowRefs.current.delete(pointer)
+                    }}
+                    field={field}
+                    depth={depth}
+                    label={label}
+                    isContainer={isContainer}
+                    selected={field.schemaPointer === activePointer}
+                    onSelect={() =>
+                      field.schemaPointer &&
+                      onSelectPointer?.(field.schemaPointer)
+                    }
+                    childCount={childCount}
+                    treeExpanded={expandedPaths.has(field.path)}
+                    onTreeToggle={() => toggleTreePath(field.path)}
+                    onOverrideChange={onOverrideChange}
+                    schemaDiagnostics={diagnostics}
+                  />
+                ),
+              )}
             </Accordion>
           </ScrollArea>
         )}
