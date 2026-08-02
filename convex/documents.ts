@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { internalMutation, mutation, query } from './_generated/server'
+import { internalMutation, query } from './_generated/server'
 import {
   documentReadValidator,
   preparedDocumentValidator,
@@ -66,7 +66,7 @@ export const updatePrepared = internalMutation({
   },
 })
 
-export const remove = mutation({
+export const remove = internalMutation({
   args: {
     id: v.id('documents'),
   },

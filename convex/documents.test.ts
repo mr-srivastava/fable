@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { api } from './_generated/api'
+import { api, internal } from './_generated/api'
 import { createConvexTest } from './test.setup'
 
 const firstExample = {
@@ -93,13 +93,13 @@ describe('documents', () => {
     expect(document).not.toHaveProperty('jsonSchema')
   })
 
-  it('deletes a document through the public mutation', async () => {
+  it('deletes a document through the internal mutation', async () => {
     const t = createConvexTest()
     const id = await t.action(api.documentWrites.create, {
       examples: [firstExample],
     })
 
-    await t.mutation(api.documents.remove, { id })
+    await t.mutation(internal.documents.remove, { id })
 
     await expect(t.query(api.documents.get, { id })).resolves.toBeNull()
   })
