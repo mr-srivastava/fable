@@ -11,19 +11,19 @@ import { action } from './_generated/server'
 import {
   contractFieldOverrideValidator,
   documentContractValidator,
-  documentExampleValidator,
+  documentVariantValidator,
 } from './documentModel'
 import type { Id } from './_generated/dataModel'
 
 const documentWriteArgs = {
-  examples: v.array(documentExampleValidator),
+  variants: v.array(documentVariantValidator),
   contract: v.optional(documentContractValidator),
   jsonSchemaJson: v.optional(v.string()),
   contractOverrides: v.optional(v.array(contractFieldOverrideValidator)),
 }
 
 function prepareDocument(args: {
-  examples: Array<{
+  variants: Array<{
     id: string
     name: string
     data: string
@@ -35,7 +35,7 @@ function prepareDocument(args: {
   contractOverrides?: Parameters<typeof prepareDocumentRecord>[3]
 }) {
   const prepared = prepareDocumentRecord(
-    args.examples,
+    args.variants,
     args.contract,
     args.jsonSchemaJson
       ? parseSerializedJsonSchema(args.jsonSchemaJson)
@@ -45,7 +45,7 @@ function prepareDocument(args: {
 
   return {
     data: prepared.data,
-    examples: args.examples,
+    variants: args.variants,
     size: prepared.size,
     totalSize: prepared.totalSize,
     contract: prepared.contract,

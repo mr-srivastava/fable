@@ -1,25 +1,25 @@
-import { MAX_EXAMPLES_PER_DOCUMENT } from '@shared/document-limits'
+import { MAX_VARIANTS_PER_DOCUMENT } from '@shared/document-limits'
 import {
   applyContractOverrides,
   getSchemaFieldPointer,
   projectJsonSchemaToContract,
-  validateExamplesAgainstSchema,
+  validateVariantsAgainstSchema,
 } from '@shared/json-schema'
-import type { ContractDiagnostics } from '@/lib/contract/inferContract'
+import type { ContractDiagnostics } from '@/lib/contract/compatibilityDiagnostics'
 import type {
   ContractFieldOverride,
   ContractOverrides,
   JsonContract,
-  JsonDocumentExample,
+  JsonDocumentVariant,
   JsonSchema,
 } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
-import { analyzeExamplesForContract } from '@/lib/contract/inferContract'
+import { analyzeVariantsForContract } from '@/lib/contract/compatibilityDiagnostics'
 import { parseJsonSafely } from '@/lib/json'
 
 export type DocumentDraft = {
-  examples: Array<JsonDocumentExample>
-  activeExampleId: string
+  variants: Array<JsonDocumentVariant>
+  activeVariantId: string
   contract?: JsonContract
   inferredJsonSchema?: JsonSchema
   jsonSchema?: JsonSchema
@@ -29,7 +29,7 @@ export type DocumentDraft = {
 }
 
 export type DocumentWriteInput = {
-  examples: Array<JsonDocumentExample>
+  variants: Array<JsonDocumentVariant>
   contract?: JsonContract
   jsonSchema?: JsonSchema
   contractOverrides?: ContractOverrides
@@ -41,13 +41,13 @@ export type ContractOverrideChange =
   | { pointer: string; type: 'enumChanged'; enumValues?: Array<string> }
   | { pointer: string; type: 'descriptionChanged'; description?: string }
 
-export function documentExamplesAreValid(examples: Array<JsonDocumentExample>) {
-  return examples.every((example) => parseJsonSafely(example.data).ok)
+export function documentVariantsAreValid(variants: Array<JsonDocumentVariant>) {
+  return variants.every((variant) => parseJsonSafely(variant.data).ok)
 }
 
-function getCompatibilityDiagnostics(examples: Array<JsonDocumentExample>) {
-  return documentExamplesAreValid(examples)
-    ? analyzeExamplesForContract(examples).diagnostics
+function getCompatibilityDiagnostics(variants: Array<JsonDocumentVariant>) {
+  return documentVariantsAreValid(variants)
+    ? analyzeVariantsForContract(variants).diagnostics
     : undefined
 }
 
@@ -71,14 +71,14 @@ function migrateLegacyAnnotations(
 }
 
 function buildSchemaState(
-  examples: Array<JsonDocumentExample>,
+  variants: Array<JsonDocumentVariant>,
   inferredJsonSchema: JsonSchema,
   overrides: ContractOverrides,
 ) {
   const applied = applyContractOverrides(inferredJsonSchema, overrides)
   const contract = projectJsonSchemaToContract(applied.jsonSchema)
-  const schemaDiagnostics = validateExamplesAgainstSchema(
-    examples,
+  const schemaDiagnostics = validateVariantsAgainstSchema(
+    variants,
     applied.jsonSchema,
   )
   return {
@@ -91,35 +91,35 @@ function buildSchemaState(
 }
 
 export function createDocumentDraft(
-  examples: Array<JsonDocumentExample>,
+  variants: Array<JsonDocumentVariant>,
   persistedContract?: JsonContract,
   persistedJsonSchema?: JsonSchema,
   persistedOverrides: ContractOverrides = [],
 ): DocumentDraft {
-  if (examples.length === 0) throw new Error('At least one example is required')
+  if (variants.length === 0) throw new Error('At least one variant is required')
 
-  const valid = documentExamplesAreValid(examples)
+  const valid = documentVariantsAreValid(variants)
   if (valid && persistedJsonSchema) {
     const schemaState = buildSchemaState(
-      examples,
+      variants,
       persistedJsonSchema,
       persistedOverrides,
     )
     return {
-      examples,
-      activeExampleId: examples[0].id,
+      variants,
+      activeVariantId: variants[0].id,
       ...schemaState,
-      diagnostics: getCompatibilityDiagnostics(examples),
+      diagnostics: getCompatibilityDiagnostics(variants),
     }
   }
 
   return {
-    examples,
-    activeExampleId: examples[0].id,
+    variants,
+    activeVariantId: variants[0].id,
     contract: persistedContract,
     contractOverrides: persistedOverrides,
     schemaDiagnostics: [],
-    diagnostics: getCompatibilityDiagnostics(examples),
+    diagnostics: getCompatibilityDiagnostics(variants),
   }
 }
 
@@ -135,54 +135,54 @@ export function applyDraftInference(
       ]
   return {
     ...draft,
-    ...buildSchemaState(draft.examples, inferredJsonSchema, overrides),
-    diagnostics: getCompatibilityDiagnostics(draft.examples),
+    ...buildSchemaState(draft.variants, inferredJsonSchema, overrides),
+    diagnostics: getCompatibilityDiagnostics(draft.variants),
   }
 }
 
-export function getActiveExample(draft: DocumentDraft): JsonDocumentExample {
+export function getActiveVariant(draft: DocumentDraft): JsonDocumentVariant {
   return (
-    draft.examples.find((example) => example.id === draft.activeExampleId) ??
-    draft.examples[0]
+    draft.variants.find((variant) => variant.id === draft.activeVariantId) ??
+    draft.variants[0]
   )
 }
 
-export function selectDraftExample(
+export function selectDraftVariant(
   draft: DocumentDraft,
   id: string,
 ): DocumentDraft {
-  return draft.examples.some((example) => example.id === id)
-    ? { ...draft, activeExampleId: id }
+  return draft.variants.some((variant) => variant.id === id)
+    ? { ...draft, activeVariantId: id }
     : draft
 }
 
-function withChangedExamples(
+function withChangedVariants(
   draft: DocumentDraft,
-  examples: Array<JsonDocumentExample>,
+  variants: Array<JsonDocumentVariant>,
 ) {
   return {
     ...draft,
-    examples,
+    variants,
     schemaDiagnostics: [],
-    diagnostics: getCompatibilityDiagnostics(examples),
+    diagnostics: getCompatibilityDiagnostics(variants),
   }
 }
 
-export function updateDraftExample(
+export function updateDraftVariant(
   draft: DocumentDraft,
   id: string,
   data: string,
   now = Date.now(),
 ): DocumentDraft {
-  return withChangedExamples(
+  return withChangedVariants(
     draft,
-    draft.examples.map((example) =>
-      example.id === id ? { ...example, data, updatedAt: now } : example,
+    draft.variants.map((variant) =>
+      variant.id === id ? { ...variant, data, updatedAt: now } : variant,
     ),
   )
 }
 
-export function renameDraftExample(
+export function renameDraftVariant(
   draft: DocumentDraft,
   id: string,
   name: string,
@@ -190,148 +190,118 @@ export function renameDraftExample(
 ): DocumentDraft {
   return {
     ...draft,
-    examples: draft.examples.map((example) =>
-      example.id === id ? { ...example, name, updatedAt: now } : example,
+    variants: draft.variants.map((variant) =>
+      variant.id === id ? { ...variant, name, updatedAt: now } : variant,
     ),
   }
 }
 
-export function addDraftExample(
+export function addDraftVariant(
   draft: DocumentDraft,
-  example: JsonDocumentExample,
+  variant: JsonDocumentVariant,
 ): DocumentDraft {
-  if (draft.examples.length >= MAX_EXAMPLES_PER_DOCUMENT) return draft
+  if (draft.variants.length >= MAX_VARIANTS_PER_DOCUMENT) return draft
   return {
-    ...withChangedExamples(draft, [...draft.examples, example]),
-    activeExampleId: example.id,
+    ...withChangedVariants(draft, [...draft.variants, variant]),
+    activeVariantId: variant.id,
   }
 }
 
-export function removeDraftExample(
+export function removeDraftVariant(
   draft: DocumentDraft,
   id: string,
 ): DocumentDraft {
-  if (draft.examples.length === 1) return draft
-  const examples = draft.examples.filter((example) => example.id !== id)
-  if (examples.length === draft.examples.length) return draft
+  if (draft.variants.length === 1) return draft
+  const variants = draft.variants.filter((variant) => variant.id !== id)
+  if (variants.length === draft.variants.length) return draft
   return {
-    ...withChangedExamples(draft, examples),
-    activeExampleId:
-      draft.activeExampleId === id ? examples[0].id : draft.activeExampleId,
+    ...withChangedVariants(draft, variants),
+    activeVariantId:
+      draft.activeVariantId === id ? variants[0].id : draft.activeVariantId,
   }
 }
 
-function applyDraftContractProjection(
-  draft: DocumentDraft,
-  contract: JsonContract,
-): DocumentDraft {
-  if (!draft.inferredJsonSchema || !draft.jsonSchema || !draft.contract)
-    return draft
-  const previousByPointer = new Map(
-    draft.contract.fields.flatMap((field) =>
-      field.schemaPointer ? [[field.schemaPointer, field] as const] : [],
-    ),
-  )
+function applyOverrideChange(
+  overrides: ContractOverrides,
+  change: ContractOverrideChange,
+  inferredJsonSchema: JsonSchema,
+): ContractOverrides | undefined {
+  const inferredField = projectJsonSchemaToContract(
+    inferredJsonSchema,
+  ).fields.find((field) => field.schemaPointer === change.pointer)
+  if (!inferredField) return undefined
+
   const overridesByPointer = new Map(
-    draft.contractOverrides.map((override) => [override.pointer, override]),
+    overrides.map((override) => [override.pointer, override]),
   )
-  const inferredByPointer = new Map(
-    projectJsonSchemaToContract(draft.inferredJsonSchema).fields.flatMap(
-      (field) =>
-        field.schemaPointer ? [[field.schemaPointer, field] as const] : [],
-    ),
-  )
+  const nextOverride: ContractFieldOverride = {
+    ...overridesByPointer.get(change.pointer),
+    pointer: change.pointer,
+  }
 
-  for (const field of contract.fields) {
-    const pointer = field.schemaPointer
-    const previous = pointer ? previousByPointer.get(pointer) : undefined
-    if (!pointer || !previous) continue
-    if (
-      previous.required === field.required &&
-      previous.nullable === field.nullable &&
-      previous.description === field.description &&
-      JSON.stringify(previous.enumValues) === JSON.stringify(field.enumValues)
-    )
-      continue
-
-    const inferred = inferredByPointer.get(pointer)
-    const nextOverride: ContractFieldOverride = {
-      ...overridesByPointer.get(pointer),
-      pointer,
-    }
-    if (previous.required !== field.required) {
-      if (field.required === inferred?.required) delete nextOverride.required
-      else nextOverride.required = field.required
-    }
-    if (previous.nullable !== field.nullable) {
-      if (field.nullable === inferred?.nullable) delete nextOverride.nullable
-      else nextOverride.nullable = field.nullable
-    }
-    if (previous.description !== field.description) {
-      if (field.description === inferred?.description)
-        delete nextOverride.description
-      else nextOverride.description = field.description
-    }
-    if (
-      JSON.stringify(previous.enumValues) !== JSON.stringify(field.enumValues)
-    ) {
+  switch (change.type) {
+    case 'requiredChanged':
+      if (change.required === inferredField.required)
+        delete nextOverride.required
+      else nextOverride.required = change.required
+      break
+    case 'nullableChanged':
+      if (change.nullable === inferredField.nullable)
+        delete nextOverride.nullable
+      else nextOverride.nullable = change.nullable
+      break
+    case 'enumChanged':
       if (
-        JSON.stringify(field.enumValues) ===
-        JSON.stringify(inferred?.enumValues)
+        JSON.stringify(change.enumValues) ===
+        JSON.stringify(inferredField.enumValues)
       ) {
         delete nextOverride.enumValues
       } else {
-        nextOverride.enumValues = field.enumValues
+        nextOverride.enumValues = change.enumValues
       }
-    }
-
-    const hasValues = Object.keys(nextOverride).some((key) => key !== 'pointer')
-    if (hasValues) overridesByPointer.set(pointer, nextOverride)
-    else overridesByPointer.delete(pointer)
+      break
+    case 'descriptionChanged':
+      if (change.description === inferredField.description) {
+        delete nextOverride.description
+      } else {
+        nextOverride.description = change.description
+      }
+      break
   }
 
-  return {
-    ...draft,
-    ...buildSchemaState(draft.examples, draft.inferredJsonSchema, [
-      ...overridesByPointer.values(),
-    ]),
-  }
+  const hasValues = Object.keys(nextOverride).some((key) => key !== 'pointer')
+  if (hasValues) overridesByPointer.set(change.pointer, nextOverride)
+  else overridesByPointer.delete(change.pointer)
+
+  return [...overridesByPointer.values()]
 }
 
 export function updateDraftContractOverride(
   draft: DocumentDraft,
   change: ContractOverrideChange,
 ): DocumentDraft {
-  if (!draft.contract) return draft
-  const field = draft.contract.fields.find(
-    (candidate) => candidate.schemaPointer === change.pointer,
+  if (!draft.inferredJsonSchema) return draft
+
+  const nextOverrides = applyOverrideChange(
+    draft.contractOverrides,
+    change,
+    draft.inferredJsonSchema,
   )
-  if (!field) return draft
+  if (!nextOverrides) return draft
 
-  const nextField = (() => {
-    switch (change.type) {
-      case 'requiredChanged':
-        return { ...field, required: change.required }
-      case 'nullableChanged':
-        return { ...field, nullable: change.nullable }
-      case 'enumChanged':
-        return { ...field, enumValues: change.enumValues }
-      case 'descriptionChanged':
-        return { ...field, description: change.description }
-    }
-  })()
-
-  return applyDraftContractProjection(draft, {
-    ...draft.contract,
-    fields: draft.contract.fields.map((candidate) =>
-      candidate.schemaPointer === change.pointer ? nextField : candidate,
+  return {
+    ...draft,
+    ...buildSchemaState(
+      draft.variants,
+      draft.inferredJsonSchema,
+      nextOverrides,
     ),
-  })
+  }
 }
 
 export function getDocumentDraftSnapshot(draft: DocumentDraft): string {
   return JSON.stringify({
-    examples: draft.examples,
+    variants: draft.variants,
     contract: draft.contract ?? null,
     jsonSchema: draft.jsonSchema ?? null,
     contractOverrides: draft.contractOverrides,
@@ -339,17 +309,17 @@ export function getDocumentDraftSnapshot(draft: DocumentDraft): string {
 }
 
 export function prepareDocumentWrite(draft: DocumentDraft): DocumentWriteInput {
-  if (!documentExamplesAreValid(draft.examples)) {
-    throw new Error('All examples must contain valid JSON')
+  if (!documentVariantsAreValid(draft.variants)) {
+    throw new Error('All variants must contain valid JSON')
   }
   if (!draft.jsonSchema || !draft.contract) {
     throw new Error('Contract inference is not complete')
   }
   if (draft.schemaDiagnostics.length > 0) {
-    throw new Error('All examples must satisfy the contract')
+    throw new Error('All variants must satisfy the contract')
   }
   return {
-    examples: draft.examples,
+    variants: draft.variants,
     contract: draft.contract,
     jsonSchema: draft.jsonSchema,
     contractOverrides: draft.contractOverrides,

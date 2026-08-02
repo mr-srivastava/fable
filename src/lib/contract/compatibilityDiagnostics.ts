@@ -2,14 +2,14 @@ import { analyzeContractCompatibility } from './analyzeContractCompatibility'
 import type {
   JsonContract,
   JsonContractField,
-  JsonDocumentExample,
+  JsonDocumentVariant,
   JsonFieldType,
 } from '@shared/document'
 import type { ContractDiagnostics } from './analyzeContractCompatibility'
 
 export type {
   ContractDiagnostics,
-  ContractExampleGroup,
+  ContractVariantGroup,
   ContractWarningSeverity,
 } from './analyzeContractCompatibility'
 
@@ -21,11 +21,11 @@ type FieldAccumulator = {
   seen: number
 }
 
-type ExampleFieldAccumulator = {
+type VariantFieldAccumulator = {
   path: string
   type: JsonFieldType
   nullable: boolean
-  seenInExamples: Set<number>
+  seenInVariants: Set<number>
 }
 
 export type ContractAnalysis = {
@@ -85,11 +85,11 @@ function upsertField(
   existing.seen += 1
 }
 
-function upsertExampleField(
-  fields: Map<string, ExampleFieldAccumulator>,
+function upsertVariantField(
+  fields: Map<string, VariantFieldAccumulator>,
   path: string,
   value: unknown,
-  exampleIndex: number,
+  variantIndex: number,
 ) {
   const nextType = getValueType(value)
   const existing = fields.get(path)
@@ -99,14 +99,14 @@ function upsertExampleField(
       path,
       type: nextType,
       nullable: value === null,
-      seenInExamples: new Set([exampleIndex]),
+      seenInVariants: new Set([variantIndex]),
     })
     return
   }
 
   existing.type = combineTypes(existing.type, nextType)
   existing.nullable = existing.nullable || value === null
-  existing.seenInExamples.add(exampleIndex)
+  existing.seenInVariants.add(variantIndex)
 }
 
 function walkValue(
@@ -165,38 +165,38 @@ function walkArray(
   }
 }
 
-function walkExampleValue(
+function walkVariantValue(
   value: unknown,
   path: string,
-  fields: Map<string, ExampleFieldAccumulator>,
-  exampleIndex: number,
+  fields: Map<string, VariantFieldAccumulator>,
+  variantIndex: number,
 ) {
   if (path) {
-    upsertExampleField(fields, path, value, exampleIndex)
+    upsertVariantField(fields, path, value, variantIndex)
   }
 
   if (Array.isArray(value)) {
-    walkExampleArray(value, path, fields, exampleIndex)
+    walkVariantArray(value, path, fields, variantIndex)
     return
   }
 
   if (isPlainObject(value)) {
     for (const [key, childValue] of Object.entries(value)) {
-      walkExampleValue(
+      walkVariantValue(
         childValue,
         path ? `${path}.${key}` : key,
         fields,
-        exampleIndex,
+        variantIndex,
       )
     }
   }
 }
 
-function walkExampleArray(
+function walkVariantArray(
   items: Array<unknown>,
   arrayPath: string,
-  fields: Map<string, ExampleFieldAccumulator>,
-  exampleIndex: number,
+  fields: Map<string, VariantFieldAccumulator>,
+  variantIndex: number,
 ) {
   if (items.length === 0) return
 
@@ -208,18 +208,18 @@ function walkExampleArray(
     for (const key of keys) {
       for (const item of objectItems) {
         if (Object.prototype.hasOwnProperty.call(item, key)) {
-          walkExampleValue(
+          walkVariantValue(
             item[key],
             `${itemPath}.${key}`,
             fields,
-            exampleIndex,
+            variantIndex,
           )
         }
       }
     }
   } else {
     for (const item of items) {
-      walkExampleValue(item, itemPath, fields, exampleIndex)
+      walkVariantValue(item, itemPath, fields, variantIndex)
     }
   }
 }
@@ -243,32 +243,32 @@ export function inferContractFromJson(value: unknown): JsonContract {
   }
 }
 
-export function analyzeExamplesForContract(
-  examples: Array<JsonDocumentExample>,
+export function analyzeVariantsForContract(
+  variants: Array<JsonDocumentVariant>,
 ): ContractAnalysis {
-  const contract = inferContractFromExamples(examples)
+  const contract = inferContractFromVariants(variants)
 
   return {
     contract,
-    diagnostics: analyzeContractCompatibility(examples, contract),
+    diagnostics: analyzeContractCompatibility(variants, contract),
   }
 }
 
-export function inferContractFromExamples(
-  examples: Array<JsonDocumentExample>,
+export function inferContractFromVariants(
+  variants: Array<JsonDocumentVariant>,
 ): JsonContract {
-  const fields = new Map<string, ExampleFieldAccumulator>()
+  const fields = new Map<string, VariantFieldAccumulator>()
 
-  examples.forEach((example, index) => {
-    walkExampleValue(JSON.parse(example.data), '', fields, index)
+  variants.forEach((variant, index) => {
+    walkVariantValue(JSON.parse(variant.data), '', fields, index)
   })
 
   const contractFields: Array<JsonContractField> = Array.from(
     fields.values(),
-  ).map(({ path, type, nullable, seenInExamples }) => ({
+  ).map(({ path, type, nullable, seenInVariants }) => ({
     path,
     type,
-    required: seenInExamples.size === examples.length,
+    required: seenInVariants.size === variants.length,
     nullable,
   }))
 

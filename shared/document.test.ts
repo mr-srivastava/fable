@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import * as schema from 'valibot'
 import {
-  assertValidDocumentExamples,
-  documentExampleSchema,
+  assertValidDocumentVariants,
+  documentVariantSchema,
   jsonContractSchema,
   parseDocumentId,
   parseSerializedJsonSchema,
@@ -30,7 +30,7 @@ const validContract = {
 
 describe('shared schemas', () => {
   it('accepts valid document examples and contracts', () => {
-    expect(schema.safeParse(documentExampleSchema, validExample).success).toBe(
+    expect(schema.safeParse(documentVariantSchema, validExample).success).toBe(
       true,
     )
     expect(schema.safeParse(jsonContractSchema, validContract).success).toBe(
@@ -39,7 +39,7 @@ describe('shared schemas', () => {
   })
 
   it('rejects document examples with missing required fields', () => {
-    const result = schema.safeParse(documentExampleSchema, {
+    const result = schema.safeParse(documentVariantSchema, {
       id: 'example-1',
       data: '{"ok":true}',
       createdAt: 1,
@@ -58,15 +58,15 @@ describe('shared schemas', () => {
   })
 
   it('keeps the existing empty examples array failure', () => {
-    expect(() => assertValidDocumentExamples([])).toThrow(
-      'At least one example is required',
+    expect(() => assertValidDocumentVariants([])).toThrow(
+      'At least one variant is required',
     )
   })
 
   it('rejects duplicate example IDs', () => {
     expect(() =>
-      assertValidDocumentExamples([validExample, validExample]),
-    ).toThrow('Example IDs must be unique')
+      assertValidDocumentVariants([validExample, validExample]),
+    ).toThrow('Variant IDs must be unique')
   })
 })
 

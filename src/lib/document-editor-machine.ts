@@ -6,18 +6,19 @@ import type {
   DocumentWriteInput,
 } from '@/lib/document-draft'
 import {
-  addDraftExample,
+  addDraftVariant,
   applyDraftInference,
-  documentExamplesAreValid,
+  documentVariantsAreValid,
   getDocumentDraftSnapshot,
   prepareDocumentWrite,
-  removeDraftExample,
-  renameDraftExample,
-  selectDraftExample,
+  removeDraftVariant,
+  renameDraftVariant,
+  selectDraftVariant,
   updateDraftContractOverride,
-  updateDraftExample,
+  updateDraftVariant,
 } from '@/lib/document-draft'
-import { createDocumentExample } from '@/lib/document-examples'
+import { draftHasUsableEffectiveSchema } from '@/lib/document-editor-capabilities'
+import { createDocumentVariant } from '@/lib/document-variants'
 
 export type DocumentPersistenceResult =
   { type: 'created'; documentId: string } | { type: 'updated' }
@@ -41,11 +42,11 @@ export type DocumentEditorMachineInput = DocumentEditorDependencies & {
 }
 
 export type DocumentEditorEvent =
-  | { type: 'example.jsonChanged'; exampleId: string; json: string }
-  | { type: 'example.selected'; exampleId: string }
-  | { type: 'example.renamed'; exampleId: string; name: string }
-  | { type: 'example.added' }
-  | { type: 'example.removed'; exampleId: string }
+  | { type: 'variant.jsonChanged'; variantId: string; json: string }
+  | { type: 'variant.selected'; variantId: string }
+  | { type: 'variant.renamed'; variantId: string; name: string }
+  | { type: 'variant.added' }
+  | { type: 'variant.removed'; variantId: string }
   | { type: 'contract.overrideChanged'; change: ContractOverrideChange }
   | { type: 'document.reset' }
   | { type: 'document.submitRequested' }
@@ -67,46 +68,79 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
 }
 
-function canUseEffectiveSchema(draft: DocumentDraft) {
-  return (
-    documentExamplesAreValid(draft.examples) &&
-    Boolean(draft.jsonSchema) &&
-    Boolean(draft.contract) &&
-    draft.schemaDiagnostics.length === 0
-  )
+/**
+ * Draft-change event effects by region:
+ * | event                    | analysis             | persistence      | export ready/failed | export generating |
+ * |--------------------------|----------------------|------------------|---------------------|-------------------|
+ * | variant.jsonChanged      | update → checking    | clear → idle*    | clear → idle        | cancel → failed   |
+ * | variant.renamed          | rename               | clear → idle*    | —                   | —                 |
+ * | variant.added            | add → checking       | clear → idle*    | clear → idle        | cancel → failed   |
+ * | variant.removed          | remove → checking    | clear → idle*    | clear → idle        | cancel → failed   |
+ * | contract.overrideChanged | override → contract  | clear → idle*    | clear → idle        | cancel → failed   |
+ * | document.reset           | reset → checking     | clear → idle*    | clear → idle        | cancel → failed   |
+ *
+ * * Persistence top-level clears without leaving `saving`; saved/failed also target idle.
+ */
+export const DRAFT_MUTATION_EVENTS = [
+  'variant.jsonChanged',
+  'variant.renamed',
+  'variant.added',
+  'variant.removed',
+  'contract.overrideChanged',
+  'document.reset',
+] as const
+
+export const EXPORT_INVALIDATING_EVENTS = [
+  'variant.jsonChanged',
+  'variant.added',
+  'variant.removed',
+  'contract.overrideChanged',
+  'document.reset',
+] as const
+
+function mapEvents<TEvent extends string, THandler>(
+  events: ReadonlyArray<TEvent>,
+  handler: THandler,
+): Record<TEvent, THandler> {
+  return Object.fromEntries(events.map((event) => [event, handler])) as Record<
+    TEvent,
+    THandler
+  >
 }
 
 const inferenceEvents = {
-  'example.jsonChanged': {
-    actions: 'updateExample',
+  'variant.jsonChanged': {
+    actions: 'updateVariant',
     target: '.checking',
   },
-  'example.added': {
-    actions: 'addExample',
+  'variant.added': {
+    actions: 'addVariant',
     target: '.checking',
   },
-  'example.removed': {
-    actions: 'removeExample',
+  'variant.removed': {
+    actions: 'removeVariant',
     target: '.checking',
   },
 } as const
 
-const persistenceInvalidationEvents = {
-  'example.jsonChanged': { target: 'idle', actions: 'clearPersistence' },
-  'example.renamed': { target: 'idle', actions: 'clearPersistence' },
-  'example.added': { target: 'idle', actions: 'clearPersistence' },
-  'example.removed': { target: 'idle', actions: 'clearPersistence' },
-  'contract.overrideChanged': { target: 'idle', actions: 'clearPersistence' },
-  'document.reset': { target: 'idle', actions: 'clearPersistence' },
-} as const
+const persistenceClearEvents = mapEvents(DRAFT_MUTATION_EVENTS, {
+  actions: 'clearPersistence',
+} as const)
 
-const exportInvalidationEvents = {
-  'example.jsonChanged': { target: 'idle', actions: 'clearExport' },
-  'example.added': { target: 'idle', actions: 'clearExport' },
-  'example.removed': { target: 'idle', actions: 'clearExport' },
-  'contract.overrideChanged': { target: 'idle', actions: 'clearExport' },
-  'document.reset': { target: 'idle', actions: 'clearExport' },
-} as const
+const persistenceInvalidationEvents = mapEvents(DRAFT_MUTATION_EVENTS, {
+  target: 'idle',
+  actions: 'clearPersistence',
+} as const)
+
+const exportInvalidationEvents = mapEvents(EXPORT_INVALIDATING_EVENTS, {
+  target: 'idle',
+  actions: 'clearExport',
+} as const)
+
+const exportCancellationEvents = mapEvents(EXPORT_INVALIDATING_EVENTS, {
+  target: 'failed',
+  actions: 'cancelExport',
+} as const)
 
 export const documentEditorMachine = setup({
   types: {
@@ -160,51 +194,51 @@ export const documentEditorMachine = setup({
     ),
   },
   guards: {
-    examplesAreInvalid: ({ context }) =>
-      !documentExamplesAreValid(context.draft.examples),
+    variantsAreInvalid: ({ context }) =>
+      !documentVariantsAreValid(context.draft.variants),
     inferenceFailed: ({ context }) => Boolean(context.analysisError),
     hasSchemaViolations: ({ context }) =>
       context.draft.schemaDiagnostics.length > 0,
     canSubmit: and([
       stateIn({ analysis: 'ready' }),
-      ({ context }) => canUseEffectiveSchema(context.draft),
+      ({ context }) => draftHasUsableEffectiveSchema(context.draft),
     ]),
     canExport: and([
       stateIn({ analysis: 'ready' }),
-      ({ context }) => canUseEffectiveSchema(context.draft),
+      ({ context }) => draftHasUsableEffectiveSchema(context.draft),
     ]),
   },
   actions: {
-    updateExample: assign(({ context, event }) => {
-      if (event.type !== 'example.jsonChanged') return {}
+    updateVariant: assign(({ context, event }) => {
+      if (event.type !== 'variant.jsonChanged') return {}
       return {
-        draft: updateDraftExample(context.draft, event.exampleId, event.json),
+        draft: updateDraftVariant(context.draft, event.variantId, event.json),
         analysisError: undefined,
       }
     }),
-    selectExample: assign(({ context, event }) => {
-      if (event.type !== 'example.selected') return {}
+    selectVariant: assign(({ context, event }) => {
+      if (event.type !== 'variant.selected') return {}
       return {
-        draft: selectDraftExample(context.draft, event.exampleId),
+        draft: selectDraftVariant(context.draft, event.variantId),
       }
     }),
-    renameExample: assign(({ context, event }) => {
-      if (event.type !== 'example.renamed') return {}
+    renameVariant: assign(({ context, event }) => {
+      if (event.type !== 'variant.renamed') return {}
       return {
-        draft: renameDraftExample(context.draft, event.exampleId, event.name),
+        draft: renameDraftVariant(context.draft, event.variantId, event.name),
       }
     }),
-    addExample: assign(({ context }) => ({
-      draft: addDraftExample(
+    addVariant: assign(({ context }) => ({
+      draft: addDraftVariant(
         context.draft,
-        createDocumentExample(context.draft.examples.length + 1),
+        createDocumentVariant(context.draft.variants.length + 1),
       ),
       analysisError: undefined,
     })),
-    removeExample: assign(({ context, event }) => {
-      if (event.type !== 'example.removed') return {}
+    removeVariant: assign(({ context, event }) => {
+      if (event.type !== 'variant.removed') return {}
       return {
-        draft: removeDraftExample(context.draft, event.exampleId),
+        draft: removeDraftVariant(context.draft, event.variantId),
         analysisError: undefined,
       }
     }),
@@ -254,14 +288,14 @@ export const documentEditorMachine = setup({
     },
   }),
   on: {
-    'example.selected': { actions: 'selectExample' },
+    'variant.selected': { actions: 'selectVariant' },
   },
   states: {
     analysis: {
       initial: 'checking',
       on: {
         ...inferenceEvents,
-        'example.renamed': { actions: 'renameExample' },
+        'variant.renamed': { actions: 'renameVariant' },
         'contract.overrideChanged': {
           actions: 'updateOverride',
           target: '.contractChecking',
@@ -274,7 +308,7 @@ export const documentEditorMachine = setup({
       states: {
         checking: {
           always: [
-            { guard: 'examplesAreInvalid', target: 'invalidJson' },
+            { guard: 'variantsAreInvalid', target: 'invalidJson' },
             { target: 'debouncing' },
           ],
         },
@@ -286,7 +320,7 @@ export const documentEditorMachine = setup({
           invoke: {
             src: 'inferContract',
             input: ({ context }) => ({
-              samples: context.draft.examples.map((example) => example.data),
+              samples: context.draft.variants.map((variant) => variant.data),
               infer: context.dependencies.inferContract,
             }),
             onDone: {
@@ -330,12 +364,7 @@ export const documentEditorMachine = setup({
     persistence: {
       initial: 'idle',
       on: {
-        'example.jsonChanged': { actions: 'clearPersistence' },
-        'example.renamed': { actions: 'clearPersistence' },
-        'example.added': { actions: 'clearPersistence' },
-        'example.removed': { actions: 'clearPersistence' },
-        'contract.overrideChanged': { actions: 'clearPersistence' },
-        'document.reset': { actions: 'clearPersistence' },
+        ...persistenceClearEvents,
       },
       states: {
         idle: {
@@ -407,26 +436,7 @@ export const documentEditorMachine = setup({
         },
         generating: {
           on: {
-            'example.jsonChanged': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'example.added': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'example.removed': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'contract.overrideChanged': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
-            'document.reset': {
-              target: 'failed',
-              actions: 'cancelExport',
-            },
+            ...exportCancellationEvents,
           },
           invoke: {
             src: 'generateTypeScript',

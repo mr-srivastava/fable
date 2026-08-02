@@ -63,13 +63,16 @@ conventions, runtime projects, and shared fixtures.
 
 Contract behavior is divided by responsibility:
 
-- `inferContract.ts` traverses JSON and infers contract fields.
-- `analyzeContractCompatibility.ts` evaluates similarity and divergence.
-- `mergeContractEdits.ts` preserves editable annotations after inference.
-- `contractTree.ts` prepares inferred paths for display.
-- `quicktype.ts` adapts Quicktype inference and TypeScript generation.
+- `quicktype.ts` adapts Quicktype inference and TypeScript generation. This is
+  the canonical JSON Schema inference path used for save and export.
 - `shared/json-schema.ts` applies overrides, projects display fields, resolves
   local references, and validates examples with Ajv.
+- `compatibilityDiagnostics.ts` traverses examples in-process for compatibility
+  warnings only. It does not produce the authoritative contract.
+- `analyzeContractCompatibility.ts` evaluates similarity and divergence used by
+  the diagnostics module.
+- `contractTree.ts` and `contractInspectorModel.ts` prepare inferred paths for
+  the contract inspector display.
 
 The compatibility diagnostics remain pure and in-process. Quicktype runs only
 in the browser worker because inference and code generation are asynchronous
@@ -83,9 +86,10 @@ React code doesn't handle message IDs, proxies, or raw worker events.
 ## Presentation seam
 
 `JsonEditorPanel` renders the editor view model and sends commands. The model
-uses discriminated states for contract analysis, submission, and export, so
-unavailable capabilities include a stable reason instead of unrelated status
-and `disabled` flags.
+derives editor assistance and validation for CodeMirror, plus discriminated
+states for contract analysis, submission, and export, so unavailable
+capabilities include a stable reason instead of unrelated status and
+`disabled` flags.
 
 Contract fields emit JSON-Pointer override commands. The document draft applies
 those commands to the inferred schema and derives the flattened contract. This

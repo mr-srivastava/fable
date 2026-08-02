@@ -44,7 +44,7 @@ describe('JsonEditorPanel workspace hierarchy', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('uses Examples and Contract tabs with one editable surface on mobile', () => {
+  it('uses Variants and Contract tabs with one editable surface on mobile', () => {
     const matchMedia = vi.spyOn(window, 'matchMedia').mockImplementation(
       (query) =>
         ({
@@ -67,7 +67,7 @@ describe('JsonEditorPanel workspace hierarchy', () => {
       />,
     )
 
-    expect(screen.getByRole('tab', { name: 'Examples' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Variants' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Contract' })).toBeInTheDocument()
     expect(screen.getAllByText('JSON editor')).toHaveLength(1)
     expect(
@@ -78,20 +78,20 @@ describe('JsonEditorPanel workspace hierarchy', () => {
   })
 
   it('formats valid JSON through the active example command', () => {
-    const updateExample = vi.fn()
+    const updateVariant = vi.fn()
     render(
       <JsonEditorPanel
         mode={{ type: 'create' }}
         model={buildDocumentEditorModel({
           payload: { status: 'valid', value: '{"id":1}', size: 8 },
         })}
-        commands={buildDocumentEditorCommands({ updateExample })}
+        commands={buildDocumentEditorCommands({ updateVariant })}
       />,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Format JSON' }))
 
-    expect(updateExample).toHaveBeenCalledWith('one', '{\n  "id": 1\n}')
+    expect(updateVariant).toHaveBeenCalledWith('one', '{\n  "id": 1\n}')
   })
 
   it('disables formatting when JSON is invalid', () => {

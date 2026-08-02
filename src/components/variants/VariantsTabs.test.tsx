@@ -1,20 +1,20 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ExamplesTabs } from './ExamplesTabs'
-import { buildDocumentExample } from '@/test/factories/document'
+import { VariantsTabs } from './VariantsTabs'
+import { buildDocumentVariant } from '@/test/factories/document'
 
-const examples = [
-  buildDocumentExample({ name: 'Success' }),
-  buildDocumentExample({ id: 'two', name: 'Error', createdAt: 2 }),
+const variants = [
+  buildDocumentVariant({ name: 'Success' }),
+  buildDocumentVariant({ id: 'two', name: 'Error', createdAt: 2 }),
 ]
 
 function renderTabs(
-  overrides: Partial<React.ComponentProps<typeof ExamplesTabs>> = {},
+  overrides: Partial<React.ComponentProps<typeof VariantsTabs>> = {},
 ) {
-  const props: React.ComponentProps<typeof ExamplesTabs> = {
-    examples,
-    activeExampleId: 'one',
+  const props: React.ComponentProps<typeof VariantsTabs> = {
+    variants,
+    activeVariantId: 'one',
     onSelect: vi.fn(),
     onRename: vi.fn(),
     onAdd: vi.fn(),
@@ -24,11 +24,11 @@ function renderTabs(
     children: <div>Editor content</div>,
     ...overrides,
   }
-  render(<ExamplesTabs {...props} />)
+  render(<VariantsTabs {...props} />)
   return props
 }
 
-describe('ExamplesTabs', () => {
+describe('VariantsTabs', () => {
   it('uses tab keyboard navigation and exposes validation counts', async () => {
     const user = userEvent.setup()
     const props = renderTabs()
@@ -53,7 +53,7 @@ describe('ExamplesTabs', () => {
     await user.click(
       await screen.findByRole('menuitem', { name: 'Rename “Success”' }),
     )
-    const input = await screen.findByRole('textbox', { name: 'Example name' })
+    const input = await screen.findByRole('textbox', { name: 'Variant name' })
     await user.clear(input)
     await user.type(input, 'Primary{Enter}')
 
@@ -63,9 +63,9 @@ describe('ExamplesTabs', () => {
     )
   })
 
-  it('scopes actions to the active example and explains last-example deletion', async () => {
+  it('scopes actions to the active variant and explains last-variant deletion', async () => {
     const user = userEvent.setup()
-    const props = renderTabs({ examples: [examples[0]] })
+    const props = renderTabs({ variants: [variants[0]] })
 
     await user.click(
       screen.getByRole('button', { name: 'Actions for Success' }),
@@ -74,31 +74,29 @@ describe('ExamplesTabs', () => {
       await screen.findByRole('menuitem', { name: 'Delete “Success”' }),
     ).toHaveAttribute('aria-disabled', 'true')
     expect(
-      screen.getByText('A specimen needs at least one example.'),
+      screen.getByText('A specimen needs at least one variant.'),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('menuitem', { name: 'Rename “Success”' }))
     await user.type(
-      await screen.findByRole('textbox', { name: 'Example name' }),
+      await screen.findByRole('textbox', { name: 'Variant name' }),
       ' changed{Escape}',
     )
 
     expect(props.onRename).not.toHaveBeenCalled()
   })
 
-  it('labels the collection and adds examples from its toolbar', async () => {
+  it('labels the collection and adds variants from its toolbar', async () => {
     const user = userEvent.setup()
     const props = renderTabs()
 
-    expect(
-      screen.getByRole('heading', { name: 'Examples' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('2 payloads')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Add example' }))
+    expect(screen.getByText(/Variants/)).toBeInTheDocument()
+    expect(screen.getByText(/2 variants/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add variant' }))
 
     expect(props.onAdd).toHaveBeenCalledOnce()
   })
 
-  it('deletes the active example from its attached actions menu', async () => {
+  it('deletes the active variant from its attached actions menu', async () => {
     const user = userEvent.setup()
     const props = renderTabs()
 

@@ -36,10 +36,10 @@ http.route({
     try {
       const now = Date.now()
       const blobId = await ctx.runAction(api.documentWrites.create, {
-        examples: [
+        variants: [
           {
             id: 'default',
-            name: 'Example',
+            name: 'Variant',
             data,
             createdAt: now,
           },

@@ -1,49 +1,50 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createActor, waitFor } from 'xstate'
-import { documentEditorMachine } from './document-editor-machine'
-import type { JsonDocumentExample, JsonSchema } from '@shared/document'
-import type { DocumentEditorMachineInput } from './document-editor-machine'
+import { waitFor } from 'xstate'
+import {
+  DRAFT_MUTATION_EVENTS,
+  EXPORT_INVALIDATING_EVENTS,
+} from './document-editor-machine'
+import type { JsonSchema } from '@shared/document'
+import type { DocumentEditorEvent } from './document-editor-machine'
 import {
   createDocumentDraft,
   getDocumentDraftSnapshot,
 } from '@/lib/document-draft'
+import {
+  advanceDocumentEditorToReady,
+  buildMachineVariant,
+  createDocumentEditorActor,
+  testStatusSchema,
+} from '@/test/factories/document-editor'
 
-const schema: JsonSchema = {
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  type: 'object',
-  properties: {
-    status: { type: 'string' },
-  },
-  required: ['status'],
-}
-
-function example(data = '{"status":"ok"}'): JsonDocumentExample {
-  return {
-    id: 'example-1',
-    name: 'Example 1',
-    data,
-    createdAt: 1,
+function draftChangeEvent(
+  type: (typeof DRAFT_MUTATION_EVENTS)[number],
+): DocumentEditorEvent {
+  switch (type) {
+    case 'variant.jsonChanged':
+      return {
+        type,
+        variantId: 'variant-1',
+        json: '{"status":"changed"}',
+      }
+    case 'variant.renamed':
+      return { type, variantId: 'variant-1', name: 'Renamed' }
+    case 'variant.added':
+      return { type }
+    case 'variant.removed':
+      return { type, variantId: 'variant-1' }
+    case 'contract.overrideChanged':
+      return {
+        type,
+        change: {
+          type: 'descriptionChanged',
+          pointer: '/properties/status',
+          description: 'Status',
+        },
+      }
+    case 'document.reset':
+      return { type }
   }
-}
-
-function createEditor(overrides: Partial<DocumentEditorMachineInput> = {}) {
-  const input: DocumentEditorMachineInput = {
-    initialDraft: createDocumentDraft([example()]),
-    inferContract: vi.fn().mockResolvedValue(schema),
-    generateTypeScript: vi
-      .fn()
-      .mockResolvedValue('export interface Specimen {}'),
-    persistDocument: vi.fn().mockResolvedValue({ type: 'updated' }),
-    ...overrides,
-  }
-  const actor = createActor(documentEditorMachine, { input })
-  actor.start()
-  return { actor, input }
-}
-
-async function advanceToReady(actor: ReturnType<typeof createEditor>['actor']) {
-  await vi.advanceTimersByTimeAsync(250)
-  return waitFor(actor, (snapshot) => snapshot.matches({ analysis: 'ready' }))
 }
 
 afterEach(() => {
@@ -53,25 +54,27 @@ afterEach(() => {
 describe('documentEditorMachine', () => {
   it('debounces valid examples and reaches a ready contract', async () => {
     vi.useFakeTimers()
-    const { actor, input } = createEditor()
+    const { actor, input } = createDocumentEditorActor()
 
     expect(actor.getSnapshot().matches({ analysis: 'debouncing' })).toBe(true)
-    await advanceToReady(actor)
+    await advanceDocumentEditorToReady(actor)
 
     expect(input.inferContract).toHaveBeenCalledOnce()
-    expect(actor.getSnapshot().context.draft.jsonSchema).toEqual(schema)
+    expect(actor.getSnapshot().context.draft.jsonSchema).toEqual(
+      testStatusSchema,
+    )
     actor.stop()
   })
 
   it('retains the last schema while invalid JSON blocks inference', async () => {
     vi.useFakeTimers()
-    const { actor, input } = createEditor()
-    await advanceToReady(actor)
+    const { actor, input } = createDocumentEditorActor()
+    await advanceDocumentEditorToReady(actor)
     const lastSchema = actor.getSnapshot().context.draft.jsonSchema
 
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{',
     })
 
@@ -83,12 +86,12 @@ describe('documentEditorMachine', () => {
 
   it('blocks persistence while re-inference is pending', async () => {
     vi.useFakeTimers()
-    const { actor, input } = createEditor()
-    await advanceToReady(actor)
+    const { actor, input } = createDocumentEditorActor()
+    await advanceDocumentEditorToReady(actor)
 
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"changed"}',
     })
     actor.send({ type: 'document.submitRequested' })
@@ -107,13 +110,13 @@ describe('documentEditorMachine', () => {
         return new Promise<JsonSchema>(() => undefined)
       },
     )
-    const { actor } = createEditor({ inferContract })
+    const { actor } = createDocumentEditorActor({ inferContract })
     await vi.advanceTimersByTimeAsync(250)
     expect(actor.getSnapshot().matches({ analysis: 'inferring' })).toBe(true)
 
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"new"}',
     })
 
@@ -124,7 +127,7 @@ describe('documentEditorMachine', () => {
 
   it('exposes inference failures without discarding the draft', async () => {
     vi.useFakeTimers()
-    const { actor } = createEditor({
+    const { actor } = createDocumentEditorActor({
       inferContract: vi.fn().mockRejectedValue(new Error('Quicktype failed')),
     })
 
@@ -132,14 +135,14 @@ describe('documentEditorMachine', () => {
     await waitFor(actor, (snapshot) => snapshot.matches({ analysis: 'failed' }))
 
     expect(actor.getSnapshot().context.analysisError).toBe('Quicktype failed')
-    expect(actor.getSnapshot().context.draft.examples).toHaveLength(1)
+    expect(actor.getSnapshot().context.draft.variants).toHaveLength(1)
     actor.stop()
   })
 
   it('applies pointer-based overrides and exposes violations', async () => {
     vi.useFakeTimers()
-    const { actor } = createEditor()
-    await advanceToReady(actor)
+    const { actor } = createDocumentEditorActor()
+    await advanceDocumentEditorToReady(actor)
     const pointer = actor
       .getSnapshot()
       .context.draft.contract?.fields.find(
@@ -165,8 +168,8 @@ describe('documentEditorMachine', () => {
 
   it('coordinates persistence, export, and the saved dirty baseline', async () => {
     vi.useFakeTimers()
-    const { actor, input } = createEditor()
-    await advanceToReady(actor)
+    const { actor, input } = createDocumentEditorActor()
+    await advanceDocumentEditorToReady(actor)
     const originalBaseline = actor.getSnapshot().context.initialSnapshot
 
     actor.send({ type: 'export.typescriptRequested' })
@@ -197,13 +200,13 @@ describe('documentEditorMachine', () => {
           finishPersistence = resolve
         }),
     )
-    const { actor } = createEditor({ persistDocument })
-    await advanceToReady(actor)
+    const { actor } = createDocumentEditorActor({ persistDocument })
+    await advanceDocumentEditorToReady(actor)
 
     actor.send({ type: 'document.submitRequested' })
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"edited while saving"}',
     })
 
@@ -227,13 +230,13 @@ describe('documentEditorMachine', () => {
         return new Promise<string>(() => undefined)
       },
     )
-    const { actor } = createEditor({ generateTypeScript })
-    await advanceToReady(actor)
+    const { actor } = createDocumentEditorActor({ generateTypeScript })
+    await advanceDocumentEditorToReady(actor)
 
     actor.send({ type: 'export.typescriptRequested' })
     actor.send({
-      type: 'example.jsonChanged',
-      exampleId: 'example-1',
+      type: 'variant.jsonChanged',
+      variantId: 'variant-1',
       json: '{"status":"changed"}',
     })
 
@@ -249,8 +252,8 @@ describe('documentEditorMachine', () => {
       .fn()
       .mockRejectedValueOnce(new Error('Offline'))
       .mockResolvedValueOnce({ type: 'updated' })
-    const { actor } = createEditor({ persistDocument })
-    await advanceToReady(actor)
+    const { actor } = createDocumentEditorActor({ persistDocument })
+    await advanceDocumentEditorToReady(actor)
 
     actor.send({ type: 'document.submitRequested' })
     await waitFor(actor, (snapshot) =>
@@ -272,8 +275,8 @@ describe('documentEditorMachine', () => {
       .fn()
       .mockRejectedValueOnce(new Error('Generation failed'))
       .mockResolvedValueOnce('type Specimen = unknown')
-    const { actor } = createEditor({ generateTypeScript })
-    await advanceToReady(actor)
+    const { actor } = createDocumentEditorActor({ generateTypeScript })
+    await advanceDocumentEditorToReady(actor)
 
     actor.send({ type: 'export.typescriptRequested' })
     await waitFor(actor, (snapshot) => snapshot.matches({ export: 'failed' }))
@@ -284,4 +287,61 @@ describe('documentEditorMachine', () => {
     expect(generateTypeScript).toHaveBeenCalledTimes(2)
     actor.stop()
   })
+
+  it.each(DRAFT_MUTATION_EVENTS)(
+    'invalidates persistence from %s after a successful save',
+    async (eventType) => {
+      vi.useFakeTimers()
+      const { actor } = createDocumentEditorActor({
+        initialDraft: createDocumentDraft([
+          buildMachineVariant(),
+          buildMachineVariant('{"status":"ok"}', {
+            id: 'variant-2',
+            name: 'Example 2',
+            createdAt: 2,
+          }),
+        ]),
+      })
+      await advanceDocumentEditorToReady(actor)
+
+      actor.send({ type: 'document.submitRequested' })
+      await waitFor(actor, (snapshot) =>
+        snapshot.matches({ persistence: 'saved' }),
+      )
+
+      actor.send(draftChangeEvent(eventType))
+
+      expect(actor.getSnapshot().matches({ persistence: 'idle' })).toBe(true)
+      expect(actor.getSnapshot().context.persistenceResult).toBeUndefined()
+      actor.stop()
+    },
+  )
+
+  it.each(EXPORT_INVALIDATING_EVENTS)(
+    'invalidates a ready export from %s',
+    async (eventType) => {
+      vi.useFakeTimers()
+      const { actor } = createDocumentEditorActor({
+        initialDraft: createDocumentDraft([
+          buildMachineVariant(),
+          buildMachineVariant('{"status":"ok"}', {
+            id: 'variant-2',
+            name: 'Example 2',
+            createdAt: 2,
+          }),
+        ]),
+      })
+      await advanceDocumentEditorToReady(actor)
+
+      actor.send({ type: 'export.typescriptRequested' })
+      await waitFor(actor, (snapshot) => snapshot.matches({ export: 'ready' }))
+      expect(actor.getSnapshot().context.exportSource).toBeDefined()
+
+      actor.send(draftChangeEvent(eventType))
+
+      expect(actor.getSnapshot().matches({ export: 'idle' })).toBe(true)
+      expect(actor.getSnapshot().context.exportSource).toBeUndefined()
+      actor.stop()
+    },
+  )
 })

@@ -17,6 +17,39 @@ function getFieldLabel(path: string): string {
   return label.replace(/\[\]$/, '[]')
 }
 
+export function formatFieldPathDisplay(
+  path: string,
+  label: string,
+): string | null {
+  if (path === label) return null
+  return `$.${path}`
+}
+
+export function getContainerPaths(
+  fields: Array<JsonContractField>,
+): Array<string> {
+  return fields
+    .filter((field) => field.type === 'object' || field.type === 'array')
+    .map((field) => field.path)
+}
+
+export function isContractRowVisible(
+  path: string,
+  expandedPaths: ReadonlySet<string>,
+  containerPaths: ReadonlySet<string> = new Set(),
+): boolean {
+  const segments = getPathSegments(path)
+  if (segments.length <= 1) return true
+
+  for (let index = 1; index < segments.length; index += 1) {
+    const ancestorPath = segments.slice(0, index).join('.')
+    if (!containerPaths.has(ancestorPath)) continue
+    if (!expandedPaths.has(ancestorPath)) return false
+  }
+
+  return true
+}
+
 function sortFieldsForDisplay(
   left: JsonContractField,
   right: JsonContractField,

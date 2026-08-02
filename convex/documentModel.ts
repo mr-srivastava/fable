@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 
-export const documentExampleValidator = v.object({
+export const documentVariantValidator = v.object({
   id: v.string(),
   name: v.string(),
   data: v.string(),
@@ -41,7 +41,7 @@ export const contractFieldOverrideValidator = v.object({
 
 export const preparedDocumentValidator = v.object({
   data: v.string(),
-  examples: v.array(documentExampleValidator),
+  variants: v.array(documentVariantValidator),
   size: v.number(),
   totalSize: v.number(),
   contract: v.optional(documentContractValidator),
@@ -53,7 +53,7 @@ export const documentReadValidator = v.object({
   _id: v.id('documents'),
   _creationTime: v.number(),
   data: v.string(),
-  examples: v.optional(v.array(documentExampleValidator)),
+  variants: v.optional(v.array(documentVariantValidator)),
   size: v.number(),
   totalSize: v.optional(v.number()),
   updatedAt: v.optional(v.number()),

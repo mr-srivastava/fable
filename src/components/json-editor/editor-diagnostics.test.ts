@@ -12,7 +12,7 @@ describe('schema editor diagnostics', () => {
     const source = '{"users":[{"email":"ok"},{"email":null}]}'
     const [diagnostic] = getSchemaEditorDiagnostics(state(source), [
       {
-        exampleId: 'one',
+        variantId: 'one',
         instancePointer: '/users/1/email',
         fieldPointer: '/users/*/email',
         rulePointer: '#/properties/users/items/properties/email/type',
@@ -34,7 +34,7 @@ describe('schema editor diagnostics', () => {
     const source = '{}'
     const [diagnostic] = getSchemaEditorDiagnostics(state(source), [
       {
-        exampleId: 'one',
+        variantId: 'one',
         instancePointer: '',
         fieldPointer: '/id',
         rulePointer: '#/required',
@@ -51,7 +51,7 @@ describe('schema editor diagnostics', () => {
   it('offers deterministic replacements for enum violations', () => {
     const [diagnostic] = getSchemaEditorDiagnostics(state('"unknown"'), [
       {
-        exampleId: 'one',
+        variantId: 'one',
         instancePointer: '',
         fieldPointer: '',
         rulePointer: '#/enum',

@@ -1,24 +1,24 @@
 import {
   assertValidDocumentContract,
-  assertValidDocumentExamples,
+  assertValidDocumentVariants,
   parseContractOverrides,
 } from './document'
 import {
   MAX_DOCUMENT_BYTES,
-  MAX_EXAMPLES_PER_DOCUMENT,
-  MAX_EXAMPLE_BYTES,
+  MAX_VARIANTS_PER_DOCUMENT,
+  MAX_VARIANT_BYTES,
   getUtf8Size,
 } from './document-limits'
 import {
   applyContractOverrides,
   normalizeJsonSchema,
   projectJsonSchemaToContract,
-  validateExamplesAgainstSchema,
+  validateVariantsAgainstSchema,
 } from './json-schema'
 import type {
   ContractOverrides,
   JsonContract,
-  JsonDocumentExample,
+  JsonDocumentVariant,
   JsonSchema,
 } from './document'
 
@@ -31,7 +31,7 @@ export type PreparedDocumentRecord = {
   contractOverrides?: ContractOverrides
 }
 
-function validateExampleData(data: string): number {
+function validateVariantData(data: string): number {
   try {
     JSON.parse(data)
   } catch {
@@ -39,26 +39,26 @@ function validateExampleData(data: string): number {
   }
 
   const size = getUtf8Size(data)
-  if (size > MAX_EXAMPLE_BYTES) {
-    throw new Error(`JSON too large: ${size} bytes (max ${MAX_EXAMPLE_BYTES})`)
+  if (size > MAX_VARIANT_BYTES) {
+    throw new Error(`JSON too large: ${size} bytes (max ${MAX_VARIANT_BYTES})`)
   }
   return size
 }
 
 export function prepareDocumentRecord(
-  examples: Array<JsonDocumentExample>,
+  variants: Array<JsonDocumentVariant>,
   contract?: JsonContract,
   jsonSchema?: JsonSchema,
   contractOverrides: ContractOverrides = [],
 ): PreparedDocumentRecord {
-  assertValidDocumentExamples(examples)
-  if (examples.length > MAX_EXAMPLES_PER_DOCUMENT) {
+  assertValidDocumentVariants(variants)
+  if (variants.length > MAX_VARIANTS_PER_DOCUMENT) {
     throw new Error(
-      `Too many examples: ${examples.length} (max ${MAX_EXAMPLES_PER_DOCUMENT})`,
+      `Too many variants: ${variants.length} (max ${MAX_VARIANTS_PER_DOCUMENT})`,
     )
   }
 
-  for (const example of examples) validateExampleData(example.data)
+  for (const variant of variants) validateVariantData(variant.data)
   if (contract) assertValidDocumentContract(contract)
   const parsedOverrides = parseContractOverrides(contractOverrides)
   let effectiveContract = contract
@@ -74,19 +74,19 @@ export function prepareDocumentRecord(
     effectiveOverrides = applied.overrides
     effectiveContract = projectJsonSchemaToContract(effectiveJsonSchema)
     if (
-      validateExamplesAgainstSchema(examples, effectiveJsonSchema).length > 0
+      validateVariantsAgainstSchema(variants, effectiveJsonSchema).length > 0
     ) {
-      throw new Error('All examples must satisfy the contract')
+      throw new Error('All variants must satisfy the contract')
     }
   } else if (parsedOverrides.length > 0) {
     throw new Error('Contract overrides require a JSON Schema')
   }
 
-  const data = examples[0].data
+  const data = variants[0].data
   const size = getUtf8Size(data)
   const totalSize = getUtf8Size(
     JSON.stringify({
-      examples,
+      variants,
       contract: effectiveContract,
       jsonSchema: effectiveJsonSchema,
       contractOverrides: effectiveOverrides,

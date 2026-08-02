@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react'
 import { EnumValuesInput } from './EnumValuesInput'
 import type { Ref } from 'react'
 import type { JsonContractField } from '@shared/document'
@@ -9,6 +10,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Field,
   FieldContent,
@@ -19,6 +21,8 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { contractTypeBadgeClass } from '@/lib/contract/contractTypeBadge'
+import { formatFieldPathDisplay } from '@/lib/contract/contractTree'
 import { cn } from '@/lib/utils'
 
 type ContractFieldRowProps = {
@@ -27,6 +31,8 @@ type ContractFieldRowProps = {
   label: string
   isContainer: boolean
   childCount?: number
+  treeExpanded?: boolean
+  onTreeToggle?: () => void
   onOverrideChange: (change: ContractOverrideChange) => void
   schemaDiagnostics?: Array<SchemaValidationDiagnostic>
   selected?: boolean
@@ -40,6 +46,8 @@ export function ContractFieldReferenceItem({
   label,
   isContainer,
   childCount = 0,
+  treeExpanded = true,
+  onTreeToggle,
   onOverrideChange,
   schemaDiagnostics = [],
   selected = false,
@@ -48,6 +56,8 @@ export function ContractFieldReferenceItem({
 }: ContractFieldRowProps) {
   const isEditable = !isContainer
   const pointer = field.schemaPointer
+  const pathDisplay = formatFieldPathDisplay(field.path, label)
+  const showTreeToggle = isContainer && childCount > 0
 
   return (
     <AccordionItem
@@ -66,10 +76,32 @@ export function ContractFieldReferenceItem({
       >
         <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-left">
           <div
-            className="flex min-w-0 items-center gap-2"
+            className="flex min-w-0 items-center gap-1"
             style={{ paddingLeft: `${depth * 1}rem` }}
           >
-            {depth > 0 && <span className="h-px w-3 shrink-0 bg-border" />}
+            {showTreeToggle ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="shrink-0 text-muted-foreground"
+                aria-label={`${treeExpanded ? 'Collapse' : 'Expand'} ${field.path}`}
+                aria-expanded={treeExpanded}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onTreeToggle?.()
+                }}
+              >
+                <ChevronRight
+                  className={cn(
+                    'transition-transform duration-200 ease-out motion-reduce:transition-none',
+                    treeExpanded && 'rotate-90',
+                  )}
+                />
+              </Button>
+            ) : depth > 0 ? (
+              <span className="size-6 shrink-0" aria-hidden="true" />
+            ) : null}
             <div className="min-w-0">
               <code
                 className={cn(
@@ -80,13 +112,21 @@ export function ContractFieldReferenceItem({
               >
                 {label}
               </code>
-              <p className="truncate font-mono text-[0.68rem] font-normal text-muted-foreground">
-                {field.path}
-              </p>
+              {pathDisplay && (
+                <p
+                  className="truncate font-mono text-[0.68rem] font-normal text-muted-foreground"
+                  title={pathDisplay}
+                >
+                  {pathDisplay}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Badge variant={isContainer ? 'outline' : 'secondary'}>
+            <Badge
+              variant="outline"
+              className={contractTypeBadgeClass(field.type)}
+            >
               {field.type}
             </Badge>
             {schemaDiagnostics.length > 0 && (

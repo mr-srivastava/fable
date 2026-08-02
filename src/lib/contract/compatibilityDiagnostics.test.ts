@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { JsonDocumentExample } from '@shared/document'
+import type { JsonDocumentVariant } from '@shared/document'
 import {
-  analyzeExamplesForContract,
-  inferContractFromExamples,
-} from '@/lib/contract/inferContract'
+  analyzeVariantsForContract,
+  inferContractFromVariants,
+} from '@/lib/contract/compatibilityDiagnostics'
 
-function example(id: string, data: unknown, name = id): JsonDocumentExample {
+function example(id: string, data: unknown, name = id): JsonDocumentVariant {
   return {
     id,
     name,
@@ -14,9 +14,9 @@ function example(id: string, data: unknown, name = id): JsonDocumentExample {
   }
 }
 
-describe('inferContractFromExamples', () => {
+describe('inferContractFromVariants', () => {
   it('marks fields required only when they appear in every example', () => {
-    const contract = inferContractFromExamples([
+    const contract = inferContractFromVariants([
       example('one', { id: '1', email: 'a@example.com' }),
       example('two', { id: '2' }),
     ])
@@ -30,7 +30,7 @@ describe('inferContractFromExamples', () => {
   })
 
   it('tracks nullable fields', () => {
-    const contract = inferContractFromExamples([
+    const contract = inferContractFromVariants([
       example('one', { name: 'Avery' }),
       example('two', { name: null }),
     ])
@@ -43,7 +43,7 @@ describe('inferContractFromExamples', () => {
   })
 
   it('marks missing keys in arrays of objects as optional', () => {
-    const contract = inferContractFromExamples([
+    const contract = inferContractFromVariants([
       example('one', { users: [{ id: '1', email: 'a@example.com' }] }),
       example('two', { users: [{ id: '2' }] }),
     ])
@@ -60,9 +60,9 @@ describe('inferContractFromExamples', () => {
   })
 })
 
-describe('analyzeExamplesForContract', () => {
+describe('analyzeVariantsForContract', () => {
   it('warns for divergent examples without shared envelope or discriminator fields', () => {
-    const analysis = analyzeExamplesForContract([
+    const analysis = analyzeVariantsForContract([
       example('user', { id: '1', email: 'a@example.com' }),
       example('invoice', { total: 42, currency: 'USD' }),
       example('event', { name: 'signed_up', timestamp: '2026-05-31' }),
@@ -72,7 +72,7 @@ describe('analyzeExamplesForContract', () => {
   })
 
   it('does not warn when examples share an envelope', () => {
-    const analysis = analyzeExamplesForContract([
+    const analysis = analyzeVariantsForContract([
       example('success', { status: 'ok', data: { id: '1' }, error: null }),
       example('error', {
         status: 'error',
@@ -88,7 +88,7 @@ describe('analyzeExamplesForContract', () => {
   })
 
   it('does not warn when examples share a discriminator field', () => {
-    const analysis = analyzeExamplesForContract([
+    const analysis = analyzeVariantsForContract([
       example('user', { type: 'user', email: 'a@example.com' }),
       example('invoice', { type: 'invoice', total: 42 }),
     ])
@@ -97,7 +97,7 @@ describe('analyzeExamplesForContract', () => {
   })
 
   it('does not warn for a single example', () => {
-    const analysis = analyzeExamplesForContract([
+    const analysis = analyzeVariantsForContract([
       example('user', { id: '1', email: 'a@example.com' }),
     ])
 
@@ -108,13 +108,13 @@ describe('analyzeExamplesForContract', () => {
   })
 
   it('groups similar examples together', () => {
-    const analysis = analyzeExamplesForContract([
+    const analysis = analyzeVariantsForContract([
       example('one', { id: '1', name: 'Avery' }),
       example('two', { id: '2', name: 'Sam' }),
       example('three', { total: 42, currency: 'USD' }),
     ])
 
-    expect(analysis.diagnostics.divergentGroups[0].exampleIds).toEqual([
+    expect(analysis.diagnostics.divergentGroups[0].variantIds).toEqual([
       'one',
       'two',
     ])

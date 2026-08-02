@@ -1,10 +1,10 @@
-import type { JsonDocumentExample } from '@shared/document'
+import type { JsonDocumentVariant } from '@shared/document'
 
-const DEFAULT_EXAMPLE_ID = 'default'
-const DEFAULT_EXAMPLE_NAME = 'Example'
-const NEW_EXAMPLE_DATA = '{\n  \n}'
+const DEFAULT_VARIANT_ID = 'default'
+const DEFAULT_VARIANT_NAME = 'Variant'
+const NEW_VARIANT_DATA = '{\n  \n}'
 
-const DEFAULT_CREATE_EXAMPLES = [
+const DEFAULT_CREATE_VARIANTS = [
   {
     name: 'Success',
     data: {
@@ -52,13 +52,15 @@ const DEFAULT_CREATE_EXAMPLES = [
   },
 ] as const
 
-type DocumentWithExamples = {
+type DocumentWithVariants = {
   data: string
   _creationTime?: number
-  examples?: Array<JsonDocumentExample>
+  variants?: Array<JsonDocumentVariant>
+  /** Legacy persisted field. Prefer `variants`. */
+  examples?: Array<JsonDocumentVariant>
 }
 
-export function createExampleId(): string {
+export function createVariantId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID()
   }
@@ -66,42 +68,43 @@ export function createExampleId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-export function createDocumentExample(
+export function createDocumentVariant(
   index: number,
-  data = NEW_EXAMPLE_DATA,
-  name = `Example ${index}`,
-): JsonDocumentExample {
+  data = NEW_VARIANT_DATA,
+  name = `Variant ${index}`,
+): JsonDocumentVariant {
   const now = Date.now()
 
   return {
-    id: createExampleId(),
+    id: createVariantId(),
     name,
     data,
     createdAt: now,
   }
 }
 
-export function createDefaultDocumentExamples(): Array<JsonDocumentExample> {
-  return DEFAULT_CREATE_EXAMPLES.map((example, index) =>
-    createDocumentExample(
+export function createDefaultDocumentVariants(): Array<JsonDocumentVariant> {
+  return DEFAULT_CREATE_VARIANTS.map((variant, index) =>
+    createDocumentVariant(
       index + 1,
-      JSON.stringify(example.data, null, 2),
-      example.name,
+      JSON.stringify(variant.data, null, 2),
+      variant.name,
     ),
   )
 }
 
-export function normalizeDocumentExamples(
-  document: DocumentWithExamples,
-): Array<JsonDocumentExample> {
-  if (document.examples && document.examples.length > 0) {
-    return document.examples
+export function normalizeDocumentVariants(
+  document: DocumentWithVariants,
+): Array<JsonDocumentVariant> {
+  const variants = document.variants ?? document.examples
+  if (variants && variants.length > 0) {
+    return variants
   }
 
   return [
     {
-      id: DEFAULT_EXAMPLE_ID,
-      name: DEFAULT_EXAMPLE_NAME,
+      id: DEFAULT_VARIANT_ID,
+      name: DEFAULT_VARIANT_NAME,
       data: document.data,
       createdAt: document._creationTime ?? Date.now(),
     },

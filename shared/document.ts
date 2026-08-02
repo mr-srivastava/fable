@@ -39,7 +39,7 @@ export const contractFieldOverrideSchema = schema.object({
 
 export const contractOverridesSchema = schema.array(contractFieldOverrideSchema)
 
-export const documentExampleSchema = schema.object({
+export const documentVariantSchema = schema.object({
   id: schema.string(),
   name: schema.string(),
   data: schema.string(),
@@ -51,13 +51,13 @@ export const documentMetadataSchema = schema.object({
   version: schema.number(),
 })
 
-export const documentExamplesSchema = schema.pipe(
-  schema.array(documentExampleSchema),
-  schema.minLength(1, 'At least one example is required'),
+export const documentVariantsSchema = schema.pipe(
+  schema.array(documentVariantSchema),
+  schema.minLength(1, 'At least one variant is required'),
   schema.check(
-    (examples) =>
-      new Set(examples.map((example) => example.id)).size === examples.length,
-    'Example IDs must be unique',
+    (variants) =>
+      new Set(variants.map((variant) => variant.id)).size === variants.length,
+    'Variant IDs must be unique',
   ),
 )
 
@@ -83,8 +83,8 @@ export type ContractFieldOverride = schema.InferOutput<
 export type ContractOverrides = schema.InferOutput<
   typeof contractOverridesSchema
 >
-export type JsonDocumentExample = schema.InferOutput<
-  typeof documentExampleSchema
+export type JsonDocumentVariant = schema.InferOutput<
+  typeof documentVariantSchema
 >
 export type JsonDocumentMetadata = schema.InferOutput<
   typeof documentMetadataSchema
@@ -96,8 +96,8 @@ export function parseDocumentId<T extends string = string>(
   return schema.safeParse(documentIdSchema, raw).success ? (raw as T) : null
 }
 
-export function assertValidDocumentExamples(examples: unknown) {
-  schema.parse(documentExamplesSchema, examples)
+export function assertValidDocumentVariants(variants: unknown) {
+  schema.parse(documentVariantsSchema, variants)
 }
 
 export function assertValidDocumentContract(contract: unknown) {

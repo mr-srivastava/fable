@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { internalMutation, mutation, query } from './_generated/server'
+import { internalMutation, query } from './_generated/server'
 import {
   documentReadValidator,
   preparedDocumentValidator,
@@ -13,7 +13,7 @@ export const createPrepared = internalMutation({
 
     return ctx.db.insert('documents', {
       data: prepared.data,
-      examples: prepared.examples,
+      variants: prepared.variants,
       size: prepared.size,
       totalSize: prepared.totalSize,
       updatedAt: Date.now(),
@@ -32,9 +32,10 @@ export const get = query({
     const document = await ctx.db.get(args.id)
     if (!document) return null
 
-    const { jsonSchema, jsonSchemaJson, ...rest } = document
+    const { jsonSchema, jsonSchemaJson, variants, examples, ...rest } = document
     return {
       ...rest,
+      variants: variants ?? examples,
       jsonSchemaJson:
         jsonSchemaJson ?? (jsonSchema ? JSON.stringify(jsonSchema) : undefined),
     }
@@ -52,7 +53,7 @@ export const updatePrepared = internalMutation({
 
     await ctx.db.patch(args.id, {
       data: prepared.data,
-      examples: prepared.examples,
+      variants: prepared.variants,
       size: prepared.size,
       totalSize: prepared.totalSize,
       updatedAt: Date.now(),
@@ -66,7 +67,7 @@ export const updatePrepared = internalMutation({
   },
 })
 
-export const remove = mutation({
+export const remove = internalMutation({
   args: {
     id: v.id('documents'),
   },
