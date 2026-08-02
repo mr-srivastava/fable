@@ -3,12 +3,10 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import Header from '../components/Header'
-import { ThemeProvider } from '../components/ThemeProvider'
 
 import ConvexProvider from '../integrations/convex/provider'
 
 import appCss from '../styles.css?url'
-import { getThemeInitScript } from '../hooks/use-theme'
 import { publicConfig } from '@/config/runtime'
 
 export const Route = createRootRoute({
@@ -51,31 +49,28 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
-        <script dangerouslySetInnerHTML={{ __html: getThemeInitScript() }} />
         <HeadContent />
       </head>
       <body>
-        <ThemeProvider>
-          <ConvexProvider>
-            <Header />
-            {children}
-            {import.meta.env.DEV && publicConfig.showDevtools && (
-              <TanStackDevtools
-                config={{
-                  position: 'bottom-right',
-                }}
-                plugins={[
-                  {
-                    name: 'Tanstack Router',
-                    render: <TanStackRouterDevtoolsPanel />,
-                  },
-                ]}
-              />
-            )}
-          </ConvexProvider>
-        </ThemeProvider>
+        <ConvexProvider>
+          <Header />
+          {children}
+          {import.meta.env.DEV && publicConfig.showDevtools && (
+            <TanStackDevtools
+              config={{
+                position: 'bottom-right',
+              }}
+              plugins={[
+                {
+                  name: 'Tanstack Router',
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+              ]}
+            />
+          )}
+        </ConvexProvider>
         <Scripts />
       </body>
     </html>

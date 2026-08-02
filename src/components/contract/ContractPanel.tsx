@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ContractFieldReferenceItem } from './ContractFieldRow'
 import type { JsonContract, JsonContractField } from '@shared/document'
 import type { SchemaValidationDiagnostic } from '@shared/json-schema'
@@ -11,7 +11,13 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { buildContractDisplayRows } from '@/lib/contract/contractTree'
+import {
+  buildContractDisplayRows,
+  getContainerPaths,
+  isContractRowVisible,
+} from '@/lib/contract/contractTree'
+
+const EMPTY_FIELDS: Array<JsonContractField> = []
 
 type ContractPanelProps = {
   contract?: JsonContract
@@ -48,8 +54,37 @@ export function ContractPanel({
   fillHeight = false,
 }: ContractPanelProps) {
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
-  const fields = contract?.fields ?? []
+  const fields = contract?.fields ?? EMPTY_FIELDS
   const rows = buildContractDisplayRows(fields)
+  const containerPaths = useMemo(() => getContainerPaths(fields), [fields])
+  const [expandedPaths, setExpandedPaths] = useState(
+    () => new Set(containerPaths),
+  )
+
+  useEffect(() => {
+    setExpandedPaths((current) => {
+      const next = new Set(current)
+      for (const path of containerPaths) next.add(path)
+      return next
+    })
+  }, [containerPaths])
+
+  const containerPathSet = useMemo(
+    () => new Set(containerPaths),
+    [containerPaths],
+  )
+  const visibleRows = rows.filter(({ field }) =>
+    isContractRowVisible(field.path, expandedPaths, containerPathSet),
+  )
+
+  function toggleTreePath(path: string) {
+    setExpandedPaths((current) => {
+      const next = new Set(current)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!activePointer) return
@@ -109,15 +144,9 @@ export function ContractPanel({
             </EmptyHeader>
           </Empty>
         ) : (
-          <ScrollArea
-            className={
-              fillHeight
-                ? 'h-full min-h-0'
-                : 'h-[min(34rem,calc(100vh-14rem))] min-h-0'
-            }
-          >
+          <ScrollArea className="h-full min-h-0">
             <Accordion multiple className="w-full">
-              {rows.map(({ field, depth, label, isContainer }) => (
+              {visibleRows.map(({ field, depth, label, isContainer }) => (
                 <ContractFieldReferenceItem
                   key={field.schemaPointer ?? field.path}
                   rowRef={(node) => {
@@ -138,6 +167,8 @@ export function ContractPanel({
                   childCount={
                     isContainer ? getImmediateChildCount(field, fields) : 0
                   }
+                  treeExpanded={expandedPaths.has(field.path)}
+                  onTreeToggle={() => toggleTreePath(field.path)}
                   onOverrideChange={onOverrideChange}
                   schemaDiagnostics={schemaDiagnostics.filter(
                     (diagnostic) =>

@@ -22,6 +22,8 @@ import { useMediaQuery } from '@/hooks/use-media-query'
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
 const CREATE_HERO_TITLE = 'Inspect a payload'
+const WORKSPACE_HEIGHT_CLASS =
+  'min-h-[28rem] h-[calc(100dvh-10.5rem)] max-h-[calc(100dvh-10.5rem)]'
 
 const CREATE_DEFAULTS = {
   description:
@@ -98,7 +100,7 @@ function ContractDiagnosticsNotice({
   )
 
   return (
-    <Alert className="border-amber-400/40 bg-amber-400/10 text-amber-950 dark:text-amber-100">
+    <Alert className="border-warning/40 bg-warning/15 text-warning-foreground">
       <AlertTriangle />
       <AlertTitle>Likely separate contracts</AlertTitle>
       <AlertDescription>
@@ -125,7 +127,7 @@ function ContractDiagnosticsNotice({
           </Button>
         </div>
         {showGroups && (
-          <div className="mt-3 space-y-2 rounded-md border border-amber-400/30 bg-background/70 p-3">
+          <div className="mt-3 space-y-2 rounded-md border border-warning/30 bg-background/70 p-3">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Suggested groups
             </p>
@@ -339,7 +341,7 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
 
   return (
     <>
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 pb-32 sm:px-6">
+      <section className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 pb-28 sm:px-6">
         <JsonEditorPanelHeader
           mode={mode.type}
           title={title}
@@ -348,14 +350,11 @@ export function JsonEditorPanel(props: JsonEditorPanelProps) {
         <SchemaStatusNotice contract={contract} />
 
         {!hydrated ? (
-          <div
-            className="min-h-[36rem] md:h-[clamp(36rem,calc(100dvh-12rem),46rem)]"
-            aria-hidden="true"
-          />
+          <div className={WORKSPACE_HEIGHT_CLASS} aria-hidden="true" />
         ) : isDesktop ? (
           <ResizablePanelGroup
             orientation="horizontal"
-            className="h-[clamp(36rem,calc(100dvh-12rem),46rem)] gap-4"
+            className={`${WORKSPACE_HEIGHT_CLASS} gap-4`}
           >
             <ResizablePanel defaultSize={56} minSize={42}>
               {payloadPanel}

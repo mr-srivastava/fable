@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { JsonDocumentExample } from '@shared/document'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -94,7 +94,8 @@ export function ExamplesTabs({
       <div className="min-w-0 overflow-x-auto pb-1">
         <TabsList
           aria-label="Document examples"
-          className="w-max min-w-full justify-start"
+          variant="line"
+          className="flex h-auto w-full min-w-max justify-start gap-2 bg-transparent p-0"
         >
           {examples.map((example) => {
             const count = validationCounts[example.id] ?? 0
@@ -103,7 +104,12 @@ export function ExamplesTabs({
             return (
               <div
                 key={example.id}
-                className="relative flex min-w-24 flex-1 items-center"
+                className={cn(
+                  'relative flex min-w-28 flex-1 items-stretch overflow-hidden rounded-md border bg-background shadow-xs',
+                  isActive
+                    ? 'border-primary/40 ring-1 ring-primary/20'
+                    : 'border-border',
+                )}
               >
                 <TabsTrigger
                   ref={(node) => {
@@ -112,62 +118,67 @@ export function ExamplesTabs({
                   }}
                   value={example.id}
                   aria-label={`${example.name}${count ? `, ${count} contract violation${count === 1 ? '' : 's'}` : ''}`}
-                  className={`w-full min-w-0 gap-2 px-3 ${isActive ? 'pr-10' : ''}`}
+                  className={cn(
+                    'h-9 w-full min-w-0 rounded-none border-0 px-3 shadow-none after:hidden data-active:bg-transparent data-active:shadow-none',
+                    isActive && 'pr-8',
+                  )}
                 >
-                  <span className="max-w-32 truncate">{example.name}</span>
+                  <span className="min-w-0 truncate">{example.name}</span>
                   {count > 0 && (
-                    <span className="rounded-full bg-destructive px-1.5 text-[0.65rem] font-semibold text-destructive-foreground">
+                    <span className="shrink-0 rounded-full bg-destructive px-1.5 text-[0.65rem] font-semibold text-destructive-foreground">
                       {count}
                     </span>
                   )}
                 </TabsTrigger>
 
                 {isActive && (
-                  <DropdownMenu
-                    onOpenChangeComplete={(open) => {
-                      if (!open && beginRenameRef.current) {
-                        beginRenameRef.current = false
-                        requestAnimationFrame(() => setRenaming(true))
-                      }
-                    }}
-                  >
-                    <DropdownMenuTrigger
-                      type="button"
-                      className={cn(
-                        buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                        'absolute right-1',
-                      )}
-                      aria-label={`Actions for ${example.name}`}
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex w-6 items-stretch">
+                    <DropdownMenu
+                      onOpenChangeComplete={(open) => {
+                        if (!open && beginRenameRef.current) {
+                          beginRenameRef.current = false
+                          requestAnimationFrame(() => setRenaming(true))
+                        }
+                      }}
                     >
-                      <MoreHorizontal />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-48">
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setDraftName(example.name)
-                            beginRenameRef.current = true
-                          }}
-                        >
-                          <Pencil />
-                          Rename “{example.name}”
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          disabled={examples.length === 1}
-                          onSelect={() => onDelete(example.id)}
-                        >
-                          <Trash2 />
-                          Delete “{example.name}”
-                        </DropdownMenuItem>
-                        {examples.length === 1 && (
-                          <p className="max-w-48 px-2 py-1.5 text-xs text-muted-foreground">
-                            A specimen needs at least one example.
-                          </p>
+                      <DropdownMenuTrigger
+                        type="button"
+                        className={cn(
+                          buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                          'pointer-events-auto size-full rounded-none border-l border-border/80 text-muted-foreground',
                         )}
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        aria-label={`Actions for ${example.name}`}
+                      >
+                        <MoreVertical />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-48">
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setDraftName(example.name)
+                              beginRenameRef.current = true
+                            }}
+                          >
+                            <Pencil />
+                            Rename “{example.name}”
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={examples.length === 1}
+                            onSelect={() => onDelete(example.id)}
+                          >
+                            <Trash2 />
+                            Delete “{example.name}”
+                          </DropdownMenuItem>
+                          {examples.length === 1 && (
+                            <p className="max-w-48 px-2 py-1.5 text-xs text-muted-foreground">
+                              A specimen needs at least one example.
+                            </p>
+                          )}
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 )}
               </div>
             )

@@ -49,4 +49,10 @@ describe('ContractPanel path selection', () => {
     await user.click(screen.getByRole('button', { name: 'data.id' }))
     expect(onSelectPointer).toHaveBeenCalledWith('/data/id')
   })
+
+  it('renders the empty state without a contract', () => {
+    render(<ContractPanel onOverrideChange={vi.fn()} />)
+
+    expect(screen.getByText('No contract fields')).toBeInTheDocument()
+  })
 })

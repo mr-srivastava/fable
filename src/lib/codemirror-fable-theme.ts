@@ -11,30 +11,19 @@ function readCssVar(name: string, fallback: string): string {
   return value || fallback
 }
 
-function buildTheme(isDark: boolean): Extension {
-  const bg = readCssVar('--card', isDark ? '#2a2a28' : '#f7f7f5')
-  const fg = readCssVar('--foreground', isDark ? '#ececec' : '#2a2a2a')
-  const border = readCssVar('--border', isDark ? '#444' : '#ddd')
-  const primary = readCssVar('--primary', isDark ? '#5eb8d4' : '#2a7a8f')
-  const muted = readCssVar('--muted-foreground', isDark ? '#999' : '#666')
-  const syntaxProperty = readCssVar(
-    '--syntax-property',
-    isDark ? '#72d5e8' : '#08758a',
-  )
-  const syntaxString = readCssVar(
-    '--syntax-string',
-    isDark ? '#85d69a' : '#287a3d',
-  )
-  const syntaxNumber = readCssVar(
-    '--syntax-number',
-    isDark ? '#e9bd72' : '#9a5b13',
-  )
-  const syntaxBoolean = readCssVar(
-    '--syntax-boolean',
-    isDark ? '#c3a6ee' : '#7047a3',
-  )
-  const syntaxNull = readCssVar('--syntax-null', isDark ? '#a9adb7' : '#626773')
-  const destructive = readCssVar('--destructive', isDark ? '#e57373' : '#c33')
+function buildTheme(): Extension {
+  const bg = readCssVar('--card', '#fafaf8')
+  const fg = readCssVar('--foreground', '#2c2a26')
+  const border = readCssVar('--border', '#d8d4cc')
+  const primary = readCssVar('--primary', '#1a7a85')
+  const muted = readCssVar('--muted-foreground', '#6b6560')
+  const mutedSurface = readCssVar('--muted', '#edebe6')
+  const syntaxProperty = readCssVar('--syntax-property', '#0d6b7a')
+  const syntaxString = readCssVar('--syntax-string', '#2a6e3f')
+  const syntaxNumber = readCssVar('--syntax-number', '#8a5a12')
+  const syntaxBoolean = readCssVar('--syntax-boolean', '#6b4a9e')
+  const syntaxNull = readCssVar('--syntax-null', '#6e6860')
+  const destructive = readCssVar('--destructive', '#c33')
 
   return [
     EditorView.theme(
@@ -53,10 +42,10 @@ function buildTheme(isDark: boolean): Extension {
         },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
           {
-            backgroundColor: `${primary}33`,
+            backgroundColor: `${primary}28`,
           },
         '.cm-activeLine': {
-          backgroundColor: `${muted}15`,
+          backgroundColor: `${mutedSurface}`,
         },
         '.cm-gutters': {
           backgroundColor: bg,
@@ -64,16 +53,16 @@ function buildTheme(isDark: boolean): Extension {
           borderRight: `1px solid ${border}`,
         },
         '.cm-activeLineGutter': {
-          backgroundColor: `${muted}10`,
+          backgroundColor: mutedSurface,
         },
         '.cm-lineNumbers .cm-gutterElement': {
           color: muted,
         },
         '.cm-matchingBracket, .cm-nonmatchingBracket': {
-          backgroundColor: `${primary}22`,
+          backgroundColor: `${primary}1f`,
         },
       },
-      { dark: isDark },
+      { dark: false },
     ),
     syntaxHighlighting(
       HighlightStyle.define([
@@ -89,20 +78,9 @@ function buildTheme(isDark: boolean): Extension {
   ]
 }
 
-let lightCache: Extension | null = null
-let darkCache: Extension | null = null
+let themeCache: Extension | null = null
 
-export function getFableCodeMirrorTheme(isDark: boolean): Extension {
-  if (isDark) {
-    darkCache ??= buildTheme(true)
-    return darkCache
-  }
-  lightCache ??= buildTheme(false)
-  return lightCache
-}
-
-/** Call when theme toggles so CSS variable reads refresh. */
-export function invalidateFableCodeMirrorThemeCache() {
-  lightCache = null
-  darkCache = null
+export function getFableCodeMirrorTheme(): Extension {
+  themeCache ??= buildTheme()
+  return themeCache
 }

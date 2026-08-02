@@ -1,6 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ThemeToggle'
 
 export default function Header() {
   const pathname = useRouterState({
@@ -17,7 +16,6 @@ export default function Header() {
           </Link>
         </h1>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           {!isCreateRoute && (
             <Button
               render={<Link to="/" />}

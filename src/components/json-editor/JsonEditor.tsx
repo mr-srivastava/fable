@@ -8,7 +8,6 @@ import { EditorView, keymap } from '@codemirror/view'
 import { AlertCircle, Braces } from 'lucide-react'
 import type { ViewUpdate } from '@codemirror/view'
 import type { JsonEditorProps } from './JsonEditor.types'
-import { useTheme } from '@/components/ThemeProvider'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -50,9 +49,7 @@ export function JsonEditor({
   pathCoordination,
 }: JsonEditorProps) {
   const editorViewRef = useRef<EditorView | null>(null)
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === 'dark'
-  const editorTheme = useMemo(() => getFableCodeMirrorTheme(isDark), [isDark])
+  const editorTheme = useMemo(() => getFableCodeMirrorTheme(), [])
   const contractFields =
     assistance.status === 'available' ? assistance.fields : []
   const completionFields =

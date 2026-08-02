@@ -74,7 +74,7 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
                 className={cn(
                   'size-2 rounded-full bg-success',
                   model.hasUnsavedChanges &&
-                    'animate-pulse bg-amber-400 shadow-[0_0_0_4px_rgb(251_191_36_/_0.18)]',
+                    'animate-pulse bg-warning shadow-[0_0_0_4px_color-mix(in_oklch,var(--warning)_20%,transparent)]',
                 )}
                 aria-hidden="true"
               />
