@@ -69,11 +69,20 @@ export function CopyButton({
         className,
       )}
     >
-      {copied ? (
-        <Check className="h-4 w-4 text-success" />
-      ) : (
-        <Copy className="h-4 w-4" />
-      )}
+      <span className="relative size-4 shrink-0" aria-hidden>
+        <Copy
+          className={cn(
+            'absolute inset-0 size-4 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-opacity',
+            copied && 'scale-95 opacity-0',
+          )}
+        />
+        <Check
+          className={cn(
+            'absolute inset-0 size-4 text-success transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-opacity',
+            !copied && 'scale-95 opacity-0',
+          )}
+        />
+      </span>
       {copying ? 'Copying…' : label}
     </Button>
   )

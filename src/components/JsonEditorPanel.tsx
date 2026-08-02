@@ -18,16 +18,17 @@ import {
 } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { cn } from '@/lib/utils'
 
 export type { JsonEditorPanelProps } from './JsonEditorPanel.types'
 
-const CREATE_HERO_TITLE = 'Inspect a payload'
+const CREATE_HERO_TITLE = 'New specimen'
 const WORKSPACE_HEIGHT_CLASS =
   'min-h-[28rem] h-[calc(100dvh-10.5rem)] max-h-[calc(100dvh-10.5rem)]'
 
 const CREATE_DEFAULTS = {
   description:
-    'Paste JSON to infer field metadata, annotate the contract, and share the specimen.',
+    'Paste JSON, add examples, annotate the contract, then save & share a stable link.',
 } as const
 
 const subscribeToHydration = () => () => undefined
@@ -126,23 +127,32 @@ function ContractDiagnosticsNotice({
             Review groups
           </Button>
         </div>
-        {showGroups && (
-          <div className="mt-3 space-y-2 rounded-md border border-warning/30 bg-background/70 p-3">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              Suggested groups
-            </p>
-            <ul className="space-y-1 text-sm">
-              {contractDiagnostics.divergentGroups.map((group, index) => (
-                <li key={group.id}>
-                  <span className="font-medium">Group {index + 1}:</span>{' '}
-                  {group.exampleIds
-                    .map((id) => exampleNameById.get(id) ?? id)
-                    .join(', ')}
-                </li>
-              ))}
-            </ul>
+        <div
+          className={cn(
+            'grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none',
+            showGroups
+              ? 'grid-rows-[1fr] opacity-100'
+              : 'grid-rows-[0fr] opacity-0',
+          )}
+        >
+          <div className="overflow-hidden">
+            <div className="mt-3 space-y-2 rounded-md border border-warning/30 bg-background/70 p-3">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Suggested groups
+              </p>
+              <ul className="space-y-1 text-sm">
+                {contractDiagnostics.divergentGroups.map((group, index) => (
+                  <li key={group.id}>
+                    <span className="font-medium">Group {index + 1}:</span>{' '}
+                    {group.exampleIds
+                      .map((id) => exampleNameById.get(id) ?? id)
+                      .join(', ')}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        )}
+        </div>
       </AlertDescription>
     </Alert>
   )

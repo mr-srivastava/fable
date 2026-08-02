@@ -1,18 +1,18 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useAction } from 'convex/react'
-import { api } from '../../convex/_generated/api'
+import { api } from '../../../convex/_generated/api'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
 import { createConvexPersistAdapter } from '@/lib/convex-persist-adapter'
 import { createDocumentDraft } from '@/lib/document-draft'
 import { createDefaultDocumentExamples } from '@/lib/document-examples'
 
-export const Route = createFileRoute('/')({
-  component: CreateDocument,
+export const Route = createFileRoute('/_app/playground')({
+  component: PlaygroundPage,
 })
 
-function CreateDocument() {
+function PlaygroundPage() {
   const initialDraft = useMemo(
     () => createDocumentDraft(createDefaultDocumentExamples()),
     [],
@@ -29,14 +29,10 @@ function CreateDocument() {
   })
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="space-y-6">
-        <JsonEditorPanel
-          mode={{ type: 'create' }}
-          model={editor.model}
-          commands={editor.commands}
-        />
-      </div>
-    </div>
+    <JsonEditorPanel
+      mode={{ type: 'create' }}
+      model={editor.model}
+      commands={editor.commands}
+    />
   )
 }

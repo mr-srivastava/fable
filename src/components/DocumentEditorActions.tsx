@@ -1,8 +1,10 @@
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, Share2 } from 'lucide-react'
 import type { DocumentEditorActionsProps } from './JsonEditorPanel.types'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { CopyButton } from '@/components/CopyButton'
-import { CopySnippet, CopySnippetMenuItems } from '@/components/CopySnippet'
+import {
+  DocumentCopyMenu,
+  DocumentCopyMenuItems,
+} from '@/components/DocumentCopyMenu'
 import { cn } from '@/lib/utils'
 import {
   DocumentExportMenu,
@@ -40,29 +42,51 @@ function SecondaryActions({
         generateTypeScript={commands.generateTypeScript}
       />
       {!isCreate && (
-        <>
-          <CopyButton
-            text={model.payload.value}
-            label="JSON"
-            ariaLabel="Copy saved JSON"
-          />
-          <CopySnippet pageUrl={mode.documentUrl} apiUrl={mode.apiUrl} />
-        </>
+        <DocumentCopyMenu
+          json={model.payload.value}
+          pageUrl={mode.documentUrl}
+          apiUrl={mode.apiUrl}
+        />
       )}
     </>
   )
 }
 
+function createStatusLabel(
+  submission: DocumentEditorActionsProps['model']['submission'],
+) {
+  if (submission.status === 'unavailable') {
+    switch (submission.reason) {
+      case 'invalidJson':
+        return 'Fix JSON to save'
+      case 'inferring':
+        return 'Updating contract…'
+      case 'invalidContract':
+        return 'Fix contract to save'
+      case 'contractViolations':
+        return 'Resolve contract issues to save'
+    }
+  }
+  if (submission.status === 'saving') return 'Saving draft…'
+  return 'Draft — not shared yet'
+}
+
 export function DocumentEditorActions(props: DocumentEditorActionsProps) {
   const { commands, model, mode } = props
   const isCreate = mode.type === 'create'
-  const submitLabel = isCreate ? 'Create specimen' : 'Update specimen'
+  const submitLabel = isCreate ? 'Save & share' : 'Update specimen'
   const submitDisabled =
     model.submission.status === 'unavailable' ||
     model.submission.status === 'saving'
+  const statusLabel = isCreate
+    ? createStatusLabel(model.submission)
+    : model.hasUnsavedChanges
+      ? 'Unsaved changes'
+      : 'Saved specimen'
+
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur supports-backdrop-filter:bg-background/85"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/80 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur-md"
       role="toolbar"
       aria-label="Editor actions"
     >
@@ -79,22 +103,11 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
                 aria-hidden="true"
               />
             )}
-            {isCreate
-              ? 'Unsaved specimen'
-              : model.hasUnsavedChanges
-                ? 'Unsaved changes'
-                : 'Saved specimen'}
+            {statusLabel}
           </p>
         </div>
         <div className="flex shrink-0 items-center justify-end gap-2">
-          <Button
-            onClick={() => void commands.submit().catch(() => undefined)}
-            disabled={submitDisabled}
-            className="transition-transform enabled:scale-[1.02] motion-reduce:enabled:scale-100"
-          >
-            {model.submission.status === 'saving' ? 'Saving…' : submitLabel}
-          </Button>
-          <div className="hidden flex-wrap items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 md:flex">
             <SecondaryActions commands={commands} model={model} mode={mode} />
           </div>
           <DropdownMenu>
@@ -137,33 +150,39 @@ export function DocumentEditorActions(props: DocumentEditorActionsProps) {
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 {!isCreate && (
-                  <>
-                    <DropdownMenuItem
-                      render={
-                        <CopyButton
-                          text={model.payload.value}
-                          label="JSON"
-                          ariaLabel="Copy saved JSON"
-                          variant="ghost"
-                          className="w-full justify-start"
-                        />
-                      }
-                    />
-                    <CopySnippetMenuItems
-                      pageUrl={mode.documentUrl}
-                      apiUrl={mode.apiUrl}
-                    />
-                  </>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Copy</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="min-w-44">
+                      <DocumentCopyMenuItems
+                        json={model.payload.value}
+                        pageUrl={mode.documentUrl}
+                        apiUrl={mode.apiUrl}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                 )}
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            onClick={() => void commands.submit().catch(() => undefined)}
+            disabled={submitDisabled}
+          >
+            {model.submission.status === 'saving' ? (
+              'Saving…'
+            ) : (
+              <>
+                {isCreate && <Share2 aria-hidden className="size-4" />}
+                {submitLabel}
+              </>
+            )}
+          </Button>
         </div>
       </div>
       {model.submission.status === 'failed' && (
         <p
           role="alert"
-          className="mx-auto mt-2 max-w-7xl text-xs text-destructive"
+          className="animate-reveal-in mx-auto mt-2 max-w-7xl text-xs text-destructive"
         >
           {model.submission.message}
         </p>

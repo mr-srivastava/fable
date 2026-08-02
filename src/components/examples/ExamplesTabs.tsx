@@ -187,7 +187,7 @@ export function ExamplesTabs({
       </div>
 
       {renaming && (
-        <div className="flex items-center gap-2 rounded-md border bg-muted/30 p-2">
+        <div className="animate-reveal-in flex items-center gap-2 rounded-md border bg-muted/30 p-2">
           <label
             htmlFor="active-example-name"
             className="shrink-0 text-sm font-medium"

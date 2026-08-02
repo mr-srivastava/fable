@@ -9,68 +9,140 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as BlobIdRouteImport } from './routes/blob.$id'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as MarketingRouteImport } from './routes/_marketing'
+import { Route as AppPlaygroundRouteImport } from './routes/_app/playground'
+import { Route as MarketingIndexRouteImport } from './routes/_marketing/index'
+import { Route as AppBlobIdRouteImport } from './routes/_app/blob.$id'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlobIdRoute = BlobIdRouteImport.update({
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/_marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppPlaygroundRoute = AppPlaygroundRouteImport.update({
+  id: '/playground',
+  path: '/playground',
+  getParentRoute: () => AppRoute,
+} as any)
+const MarketingIndexRoute = MarketingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MarketingRoute,
+} as any)
+const AppBlobIdRoute = AppBlobIdRouteImport.update({
   id: '/blob/$id',
   path: '/blob/$id',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/blob/$id': typeof BlobIdRoute
+  '/': typeof MarketingIndexRoute
+  '/playground': typeof AppPlaygroundRoute
+  '/blob/$id': typeof AppBlobIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/blob/$id': typeof BlobIdRoute
+  '/': typeof MarketingIndexRoute
+  '/playground': typeof AppPlaygroundRoute
+  '/blob/$id': typeof AppBlobIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/blob/$id': typeof BlobIdRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_marketing': typeof MarketingRouteWithChildren
+  '/_app/playground': typeof AppPlaygroundRoute
+  '/_marketing/': typeof MarketingIndexRoute
+  '/_app/blob/$id': typeof AppBlobIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/blob/$id'
+  fullPaths: '/' | '/playground' | '/blob/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/blob/$id'
-  id: '__root__' | '/' | '/blob/$id'
+  to: '/' | '/playground' | '/blob/$id'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_marketing'
+    | '/_app/playground'
+    | '/_marketing/'
+    | '/_app/blob/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BlobIdRoute: typeof BlobIdRoute
+  AppRoute: typeof AppRouteWithChildren
+  MarketingRoute: typeof MarketingRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blob/$id': {
-      id: '/blob/$id'
+    '/_marketing': {
+      id: '/_marketing'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/playground': {
+      id: '/_app/playground'
+      path: '/playground'
+      fullPath: '/playground'
+      preLoaderRoute: typeof AppPlaygroundRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_marketing/': {
+      id: '/_marketing/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof MarketingIndexRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_app/blob/$id': {
+      id: '/_app/blob/$id'
       path: '/blob/$id'
       fullPath: '/blob/$id'
-      preLoaderRoute: typeof BlobIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppBlobIdRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppPlaygroundRoute: typeof AppPlaygroundRoute
+  AppBlobIdRoute: typeof AppBlobIdRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppPlaygroundRoute: AppPlaygroundRoute,
+  AppBlobIdRoute: AppBlobIdRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+interface MarketingRouteChildren {
+  MarketingIndexRoute: typeof MarketingIndexRoute
+}
+
+const MarketingRouteChildren: MarketingRouteChildren = {
+  MarketingIndexRoute: MarketingIndexRoute,
+}
+
+const MarketingRouteWithChildren = MarketingRoute._addFileChildren(
+  MarketingRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BlobIdRoute: BlobIdRoute,
+  AppRoute: AppRouteWithChildren,
+  MarketingRoute: MarketingRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

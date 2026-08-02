@@ -7,24 +7,27 @@ import {
   parseJsonContract,
   parseSerializedJsonSchema,
 } from '@shared/document'
-import { api } from '../../convex/_generated/api'
+import { api } from '../../../convex/_generated/api'
 import type { FunctionReturnType } from 'convex/server'
-import type { Id } from '../../convex/_generated/dataModel'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { JsonEditorPanel } from '@/components/JsonEditorPanel'
 import { useDocumentEditor } from '@/hooks/use-document-editor'
 import { createConvexPersistAdapter } from '@/lib/convex-persist-adapter'
 import { createDocumentDraft } from '@/lib/document-draft'
 import { normalizeDocumentExamples } from '@/lib/document-examples'
 
-export const Route = createFileRoute('/blob/$id')({
+export const Route = createFileRoute('/_app/blob/$id')({
   component: ViewDocument,
 })
 
 function DocumentNotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center gap-4 p-6">
       <p className="font-medium text-destructive">Document not found</p>
-      <Link to="/" className="font-medium text-primary hover:underline">
+      <Link
+        to="/playground"
+        className="font-medium text-primary hover:underline"
+      >
         Create a specimen
       </Link>
     </div>
@@ -92,17 +95,13 @@ function DocumentEditor({
     : '—'
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="space-y-6">
-        <JsonEditorPanel
-          mode={{ type: 'saved', documentUrl, apiUrl }}
-          model={editor.model}
-          commands={editor.commands}
-          title="Saved specimen"
-          description={`Last updated ${updatedAtFormatted}`}
-        />
-      </div>
-    </div>
+    <JsonEditorPanel
+      mode={{ type: 'saved', documentUrl, apiUrl }}
+      model={editor.model}
+      commands={editor.commands}
+      title="Saved specimen"
+      description={`Last updated ${updatedAtFormatted}`}
+    />
   )
 }
 
@@ -117,7 +116,7 @@ function ViewDocument() {
 
   if (document === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6">
         <p className="font-medium text-muted-foreground">Loading…</p>
       </div>
     )

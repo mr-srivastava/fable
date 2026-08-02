@@ -1,27 +1,25 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { SiteBrandLink } from '@/components/SiteBrandLink'
 import { Button } from '@/components/ui/button'
 
 export default function Header() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const isCreateRoute = pathname === '/'
+  const isPlaygroundRoute = pathname === '/playground'
 
   return (
-    <header className="border-b bg-background/95 text-foreground backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-        <h1 className="font-mono text-lg font-semibold tracking-tight">
-          <Link to="/" className="hover:opacity-90">
-            Specimen
-          </Link>
-        </h1>
+    <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 text-foreground backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-4 sm:px-6">
+        <SiteBrandLink />
         <div className="flex items-center gap-2">
-          {!isCreateRoute && (
+          {!isPlaygroundRoute && (
             <Button
-              render={<Link to="/" />}
+              render={<Link to="/playground" />}
               nativeButton={false}
               variant="default"
               size="sm"
+              className="shrink-0"
             >
               New specimen
             </Button>

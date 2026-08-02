@@ -94,7 +94,7 @@ export function ContractFieldReferenceItem({
               >
                 <ChevronRight
                   className={cn(
-                    'transition-transform',
+                    'transition-transform duration-200 ease-out motion-reduce:transition-none',
                     treeExpanded && 'rotate-90',
                   )}
                 />
