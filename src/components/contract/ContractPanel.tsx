@@ -67,7 +67,7 @@ export function ContractPanel({
       else next.add(path)
       return next
     })
-  }, [activePointer])
+  }
 
   const activeField = fields.find(
     (field) => field.schemaPointer === activePointer,
@@ -82,10 +82,6 @@ export function ContractPanel({
         : 'smooth',
     })
   }, [activePointer])
-
-  const activeField = fields.find(
-    (field) => field.schemaPointer === activePointer,
-  )
   const visibleRows = inspector.rows.filter((row) => row.visible)
 
   return (
