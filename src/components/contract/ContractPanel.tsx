@@ -67,7 +67,11 @@ export function ContractPanel({
       else next.add(path)
       return next
     })
-  }
+  }, [activePointer])
+
+  const activeField = fields.find(
+    (field) => field.schemaPointer === activePointer,
+  )
 
   useEffect(() => {
     if (!activePointer) return
